@@ -1,0 +1,9 @@
+# docker-compose.yml — Qentis full local stack
+# See plan.md Section 13 for the complete configuration
+version: '3.9'
+
+services: {}
+
+volumes:
+  postgres_data:
+  media_volume:
