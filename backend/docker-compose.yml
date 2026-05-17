@@ -32,6 +32,30 @@ services:
       - qentis_network
 
   # ── SERVICES ───────────────────────────────────
+  user-auth:
+    build: ./services/user-auth
+    container_name: user-auth
+    ports:
+      - "8001:8001"
+    environment:
+      - SECRET_KEY=qentis-auth-secret-key-2026
+      - DEBUG=True
+      - DB_HOST=postgres
+      - REDIS_URL=redis://redis:6379/0
+      - ALLOWED_HOSTS=*
+      - JWT_ACCESS_TOKEN_LIFETIME_MINUTES=60
+      - JWT_REFRESH_TOKEN_LIFETIME_DAYS=7
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    networks:
+      - qentis_network
+    volumes:
+      - ./services/user-auth:/app
+    restart: unless-stopped
+
   institution:
     build: ./services/institution
     container_name: institution
