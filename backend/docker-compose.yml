@@ -78,6 +78,33 @@ services:
     volumes:
       - ./services/institution:/app
     restart: unless-stopped
+    
+  item-registration:
+    build: ./services/item-registration
+    container_name: item-registration
+    ports:
+      - "8003:8003"
+    environment:
+      - SECRET_KEY=qentis-item-registration-secret-key-2026
+      - DEBUG=True
+      - DB_HOST=postgres
+      - REDIS_URL=redis://redis:6379/2
+      - AUTH_SERVICE_URL=http://user-auth:8001
+      - BLOCKCHAIN_SERVICE_URL=http://blockchain:8004
+      - OUTPUT_SERVICE_URL=http://auth-output:8005
+      - ALLOWED_HOSTS=*
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
+      user-auth:
+        condition: service_started
+    networks:
+      - qentis_network
+    volumes:
+      - ./services/item-registration:/app
+    restart: unless-stopped
 
 networks:
   qentis_network:
