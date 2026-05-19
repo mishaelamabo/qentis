@@ -144,6 +144,31 @@ services:
       - ./services/blockchain:/app
     restart: unless-stopped
 
+  auth-output:
+    build: ./services/auth-output
+    container_name: auth-output
+    ports:
+      - "8005:8005"
+    environment:
+      - SECRET_KEY=qentis-auth-output-secret-key-2026
+      - DEBUG=True
+      - DB_HOST=postgres
+      - ALLOWED_HOSTS=*
+      - AUTH_SERVICE_URL=http://user-auth:8001
+      - BLOCKCHAIN_SERVICE_URL=http://blockchain:8004
+      - MEDIA_ROOT=/app/media
+    depends_on:
+      postgres:
+        condition: service_healthy
+      blockchain:
+        condition: service_started
+    networks:
+      - qentis_network
+    volumes:
+      - ./services/auth-output:/app
+      - auth_output_media:/app/media
+    restart: unless-stopped
+
   verification:
     build: ./services/verification
     container_name: verification
@@ -180,3 +205,4 @@ networks:
 
 volumes:
   postgres_data:
+  auth_output_media:

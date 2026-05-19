@@ -77,17 +77,65 @@ Fix: Always `cd backend` first before any docker-compose command.
 ---
 
 ## User & Auth Service — Port 8001
-**Owner:** Mishael | **Status:** ✅ Complete
+**Owner:** Daniel | **Status:** 
 Custom User model with 4 roles. JWT via simplejwt. Sets the pattern all services follow.
 
 ---
 
 ## Authentication Output Service — Port 8005
-**Owner:** Daniel | **Status:** ⏳ Starting next
+**Owner:** Daniel | **Date:** 19 May 2026 | **Tests:** 25 passed | **Coverage:** 91%
 
----
+### What it does
+Generates all authentication outputs after an item is registered.
+Called by Item Registration Service. Returns QR codes, serial numbers,
+digital signatures and watermarks to the issuer for download.
 
-*Updated: 18 May 2026 — Daniel*
+### API Endpoints
+| Method | Endpoint | Purpose |
+|---|---|---|
+| POST | `/api/output/generate/` | Generate all outputs for a registered item |
+| GET | `/api/output/item/{item_id}/` | Get all outputs for an item |
+| POST | `/api/output/verify/signature/` | Verify a digital signature |
+| POST | `/api/output/verify/watermark/` | Verify a watermark from an image |
+| GET | `/api/output/health/` | Service health check |
+
+### Output generation rules
+- QR code + serial number — always generated for all categories
+- Digital signature — ACADEMIC and DOCUMENT only
+- Watermark — embedded using LSB steganography via Pillow
+
+### Verified working
+- Health: `http://localhost:8005/api/output/health/` → `status: ok`
+- Swagger: `http://localhost:8005/api/docs/`
+
+### Challenges and solutions
+
+**stegano library conflicts with Pillow 10.4.0**
+stegano 0.11.2 requires Pillow < 10.0.0 but we needed 10.4.0.
+Also stegano pulls in opencv-python as a dependency which crashes
+Docker due to memory issues.
+Fix: Dropped stegano completely. Implemented LSB watermarking from
+scratch using pure Pillow — same functionality, zero extra dependencies.
+
+**opencv-python-headless crashes Docker build**
+The apt-get block installing libgl1-mesa-glx failed because that package
+was renamed to libgl1 in Debian Trixie. Even after fixing the name,
+OpenCV installation exhausted Docker's available RAM (only ~1.2GB free).
+Fix: Removed OpenCV entirely. Pillow handles all image processing needed.
+
+**generators.py functions missing after partial replacement**
+After replacing only the watermark section, the serial number and QR
+code functions above were accidentally deleted.
+Fix: Replaced the entire generators.py file with the complete version.
+
+**ImportError: cannot import name 'generate_serial_number'**
+Caused by the incomplete generators.py above.
+Fix: Same as above — full file replacement.
+
+**Coverage at 71% — .coveragerc not excluding config/ and manage.py**
+The coverage was measuring files outside output_app including config/
+settings.py and manage.py which inflated the total statement count.
+Fix: Updated .coveragerc to source only output_app. Final coverage: 91%.
 
 ---
 

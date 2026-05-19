@@ -1,0 +1,8 @@
+[run]
+source = output_app
+omit =
+    output_app/migrations/*
+    output_app/tests.py
+
+[report]
+show_missing = True
