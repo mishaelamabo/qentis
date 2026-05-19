@@ -199,6 +199,30 @@ services:
       - ./services/verification:/app
     restart: unless-stopped
 
+  admin-analytics:
+    build: ./services/admin-analytics
+    container_name: admin-analytics
+    ports:
+      - "8007:8007"
+    environment:
+      - SECRET_KEY=qentis-admin-analytics-secret-key-2026
+      - DEBUG=True
+      - DB_HOST=postgres
+      - ALLOWED_HOSTS=*
+      - AUTH_SERVICE_URL=http://user-auth:8001
+      - INSTITUTION_SERVICE_URL=http://institution:8002
+      - ITEM_SERVICE_URL=http://item-registration:8003
+      - VERIFICATION_SERVICE_URL=http://verification:8006
+      - FRAUD_THRESHOLD=50
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - qentis_network
+    volumes:
+      - ./services/admin-analytics:/app
+    restart: unless-stopped
+
 networks:
   qentis_network:
     driver: bridge

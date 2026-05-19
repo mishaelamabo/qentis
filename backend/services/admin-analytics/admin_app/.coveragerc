@@ -1,0 +1,8 @@
+[run]
+source = admin_app
+omit =
+    admin_app/migrations/*
+    admin_app/tests.py
+
+[report]
+show_missing = True

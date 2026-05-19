@@ -77,7 +77,7 @@ Fix: Always `cd backend` first before any docker-compose command.
 ---
 
 ## User & Auth Service — Port 8001
-**Owner:** Daniel | **Status:** 
+**Owner:** Mishael | **Status:** 
 Custom User model with 4 roles. JWT via simplejwt. Sets the pattern all services follow.
 
 ---
@@ -138,6 +138,40 @@ settings.py and manage.py which inflated the total statement count.
 Fix: Updated .coveragerc to source only output_app. Final coverage: 91%.
 
 ---
+
+## Admin & Analytics Service — Port 8007
+**Owner:** Daniel | **Date:** 19 May 2026 | **Tests:** 17 passed | **Coverage:** 99%
+
+### What it does
+Platform management dashboard for the Qentis administrator.
+Stores and serves fraud alerts raised by the Verification Service,
+logs all significant platform events, and provides analytics stats
+for the admin dashboard.
+
+### API Endpoints
+| Method | Endpoint | Purpose |
+|---|---|---|
+| GET | `/api/admin/stats/` | Platform statistics — totals by category |
+| GET | `/api/admin/fraud-alerts/` | List all fraud alerts |
+| POST | `/api/admin/fraud-alerts/create/` | Raise a new fraud alert |
+| PATCH | `/api/admin/fraud-alerts/{id}/update/` | Resolve or dismiss an alert |
+| GET | `/api/admin/activity/` | All platform activity logs |
+| POST | `/api/admin/activity/create/` | Log a new activity event |
+| GET | `/api/admin/health/` | Service health check |
+
+### Verified working
+- Health: `http://localhost:8007/api/admin/health/` → `status: ok`
+- Swagger: `http://localhost:8007/api/docs/`
+
+### Challenges and solutions
+
+**Test failed — nonexistent-id is not a valid UUID**
+The not-found test used `nonexistent-id` as the alert ID but the
+FraudAlert model uses UUID as primary key. Django crashed trying
+to convert the string to UUID before even reaching the view.
+Fix 1: Changed test to use a valid UUID format that does not exist
+`00000000-0000-0000-0000-000000000000`.
+Fix 2: Updated view to catch all exceptions not just DoesNotExist.
 
 ## Key Concepts — For the Project Report
 
