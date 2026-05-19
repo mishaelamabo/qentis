@@ -11,13 +11,13 @@
 
 | Service | Owner | Port | Status |
 |---|---|---|---|
-| User & Auth | Mishael | 8001 | ✅ Complete |
+| User & Auth | Mishael | 8001 | 🔄 In progress |
 | Institution Management | Mishael | 8002 | 🔄 In progress |
 | Item Registration | Mishael | 8003 | 🔄 In progress |
 | Blockchain | Daniel | 8004 | ✅ Complete |
-| Authentication Output | Daniel | 8005 | ⏳ Next |
+| Authentication Output | Daniel | 8005 | ✅ Complete |
 | Verification | Mishael | 8006 | 🔄 In progress |
-| Admin & Analytics | Mishael | 8007 | 🔄 In progress |
+| Admin & Analytics | Mishael | 8007 | ✅ Complete |
 
 ---
 
@@ -173,6 +173,40 @@ Fix 1: Changed test to use a valid UUID format that does not exist
 `00000000-0000-0000-0000-000000000000`.
 Fix 2: Updated view to catch all exceptions not just DoesNotExist.
 
+
+## Admin & Analytics Service — Port 8007
+**Owner:** Daniel | **Date:** 19 May 2026 | **Tests:** 17 passed | **Coverage:** 99%
+
+### What it does
+Platform management service for the Qentis administrator. Stores fraud
+alerts raised by the Verification Service when an item is verified more
+than 50 times in one hour. Logs all significant platform events and
+provides analytics statistics for the admin dashboard.
+
+### API Endpoints
+| Method | Endpoint | Purpose |
+|---|---|---|
+| GET | `/api/admin/stats/` | Platform statistics |
+| GET | `/api/admin/fraud-alerts/` | List all fraud alerts |
+| POST | `/api/admin/fraud-alerts/create/` | Raise a new fraud alert |
+| PATCH | `/api/admin/fraud-alerts/{id}/update/` | Resolve or dismiss alert |
+| GET | `/api/admin/activity/` | All platform activity logs |
+| POST | `/api/admin/activity/create/` | Log a new activity event |
+| GET | `/api/admin/health/` | Service health check |
+
+### Verified working
+- Health: `http://localhost:8007/api/admin/health/` → `status: ok`
+- Swagger: `http://localhost:8007/api/docs/`
+
+### Challenges and solutions
+
+**Test failed — nonexistent-id is not a valid UUID**
+The not-found test used `nonexistent-id` as the alert ID but FraudAlert
+uses UUID as primary key. Django crashed before reaching the view.
+Fix 1: Changed test to use valid UUID format that does not exist in DB
+`00000000-0000-0000-0000-000000000000`.
+Fix 2: Updated view to catch all exceptions not just DoesNotExist.
+
 ## Key Concepts — For the Project Report
 
 ### What is Blockchain?
@@ -254,3 +288,14 @@ own Python installation and packages. No virtual environment is needed.
   describing what database changes need to be made
 - `migrate` — takes that migration file and actually executes the changes
   against the PostgreSQL database, creating or modifying tables
+
+
+  ---
+
+## Integration Test — 19 May 2026
+All 7 services started simultaneously with `docker-compose up`.
+Confirmed running together without errors:
+- postgres, redis, ganache all healthy
+- All 7 Django services showing `Watching for file changes with StatReloader`
+- Ganache running with 10 funded accounts on port 8545
+- All inter-service network connections established
