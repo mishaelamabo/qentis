@@ -1,6 +1,5 @@
 // ─────────────────────────────────────────────
 // Qentis — API Configuration
-// Central place for all backend service URLs
 // ─────────────────────────────────────────────
 
 const API_BASE = {
@@ -18,46 +17,44 @@ const API_BASE = {
 // ─────────────────────────────────────────────
 
 const Auth = {
-    getToken: () => localStorage.getItem('access_token'),
-    getRefreshToken: () => localStorage.getItem('refresh_token'),
-    getUser: () => JSON.parse(localStorage.getItem('user') || '{}'),
-    getRole: () => localStorage.getItem('user_role'),
+    getToken: () => localStorage.getItem('qentis_token'),
+    getRefreshToken: () => localStorage.getItem('qentis_refresh'),
+    getUser: () => JSON.parse(localStorage.getItem('qentis_user') || 'null'),
+    getRole: () => localStorage.getItem('qentis_role'),
 
     setToken: (access) => {
-        localStorage.setItem('access_token', access);
+        localStorage.setItem('qentis_token', access);
     },
 
     setTokens: (access, refresh) => {
-        localStorage.setItem('access_token', access);
-        localStorage.setItem('refresh_token', refresh);
+        localStorage.setItem('qentis_token', access);
+        localStorage.setItem('qentis_refresh', refresh);
     },
 
     setUser: (user) => {
-        localStorage.setItem('user', JSON.stringify(user));
-        localStorage.setItem('user_role', user.role);
+        localStorage.setItem('qentis_user', JSON.stringify(user));
+        localStorage.setItem('qentis_role', user.role);
     },
 
     clear: () => {
-        localStorage.removeItem('access_token');
-        localStorage.removeItem('refresh_token');
-        localStorage.removeItem('user');
-        localStorage.removeItem('user_role');
+        localStorage.removeItem('qentis_token');
+        localStorage.removeItem('qentis_refresh');
+        localStorage.removeItem('qentis_user');
+        localStorage.removeItem('qentis_role');
     },
 
-    isLoggedIn: () => !!localStorage.getItem('access_token'),
+    isLoggedIn: () => !!localStorage.getItem('qentis_token'),
 
-    // Guard — redirect if not logged in or wrong role
     guard: (requiredRole = null) => {
         if (!Auth.isLoggedIn()) {
             window.location.href = '/login.html';
             return;
         }
         if (requiredRole && Auth.getRole() !== requiredRole) {
-            redirectByRole(Auth.getRole());
+            window.location.href = '/login.html';
         }
     },
 
-    // Logout — clear storage and redirect
     logout: async () => {
         const refresh_token = Auth.getRefreshToken();
         try {
@@ -139,7 +136,7 @@ function redirectByRole(role) {
 }
 
 // ─────────────────────────────────────────────
-// UI Helpers — used across all pages
+// UI Helpers
 // ─────────────────────────────────────────────
 
 function showAlert(elementId, message, type = 'error') {
@@ -157,6 +154,10 @@ function hideAlert(elementId) {
     el.textContent = '';
 }
 
+function showSuccess(elementId, message) {
+    showAlert(elementId, message, 'success');
+}
+
 function setLoading(buttonId, loading, loadingText = 'Loading...') {
     const btn = document.getElementById(buttonId);
     if (!btn) return;
@@ -167,10 +168,6 @@ function setLoading(buttonId, loading, loadingText = 'Loading...') {
     } else {
         btn.textContent = btn.dataset.originalText || loadingText;
     }
-}
-
-function showSuccess(elementId, message) {
-    showAlert(elementId, message, 'success');
 }
 
 function formatDate(dateString) {
@@ -191,4 +188,9 @@ function formatDateTime(dateString) {
         hour: '2-digit',
         minute: '2-digit'
     });
+}
+
+function formatHash(hash) {
+    if (!hash) return '—';
+    return hash.slice(0, 10) + '...' + hash.slice(-6);
 }

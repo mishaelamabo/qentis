@@ -1,1 +1,53 @@
-﻿<!DOCTYPE html><html lang="en"><head>  <meta charset="UTF-8"/>  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>  <title>Analytics — Qentis</title>  <link href="../../assets/css/admin/analytics.css" rel="stylesheet"/></head><body data-role="ADMIN" data-sidebar="admin" data-page="analytics"><script src="../../assets/js/api.js"></script><script src="../../assets/js/layout.js"></script><script src="../../assets/js/init.js"></script><main class="q-main">  <div class="q-page-header"><h1>Analytics</h1><p>Full implementation coming in Week 2/3</p></div>  <div class="q-card"><p class="stub-note">🚧 Stub page — connect to backend API</p></div></main></body></html>
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Analytics — Qentis</title>
+  <link href="../../assets/css/admin/analytics.css" rel="stylesheet"/>
+</head>
+<body data-role="ADMIN" data-sidebar="admin" data-page="analytics">
+
+<script src="../../assets/js/api/config.js"></script>
+<script src="../../assets/js/api/auth.js"></script>
+<script src="../../assets/js/layout.js"></script>
+<script src="../../assets/js/init.js"></script>
+
+<main class="q-main">
+  <div class="q-page-header">
+    <h1>Analytics</h1>
+    <p>Platform statistics and insights</p>
+  </div>
+
+  <div class="q-stats-grid">
+    <div class="q-stat-card">
+      <div class="q-stat-label">Total Registrations</div>
+      <div class="q-stat-value" id="stat-total">—</div>
+    </div>
+    <div class="q-stat-card">
+      <div class="q-stat-label">Certificates</div>
+      <div class="q-stat-value" id="stat-certificates">—</div>
+    </div>
+    <div class="q-stat-card">
+      <div class="q-stat-label">Pharmaceuticals</div>
+      <div class="q-stat-value" id="stat-pharma">—</div>
+    </div>
+    <div class="q-stat-card">
+      <div class="q-stat-label">Documents</div>
+      <div class="q-stat-value" id="stat-documents">—</div>
+    </div>
+    <div class="q-stat-card">
+      <div class="q-stat-label">Banknotes</div>
+      <div class="q-stat-value" id="stat-banknotes">—</div>
+    </div>
+  </div>
+
+  <div class="q-card" style="margin-top:24px">
+    <h2>Verifications by Method</h2>
+    <div id="verification-stats"><p class="q-loading">Loading...</p></div>
+  </div>
+</main>
+
+<script src="../../assets/js/admin/analytics.js"></script>
+</body>
+</html>
