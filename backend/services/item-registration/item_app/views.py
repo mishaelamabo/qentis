@@ -5,8 +5,10 @@ from django.utils import timezone
 from django.conf import settings
 from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes
-from rest_framework.permissions import IsAuthenticated, AllowAny
+from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
+from drf_yasg.utils import swagger_auto_schema
+from drf_yasg import openapi
 
 from .models import (
     Item,
@@ -20,6 +22,7 @@ from .serializers import (
     RegisterItemSerializer,
     RevokeItemSerializer,
 )
+from .auth_helper import require_auth, require_role
 
 
 def generate_hash(field_values):
@@ -27,20 +30,27 @@ def generate_hash(field_values):
     return hashlib.sha256(field_values.encode()).hexdigest()
 
 
+def get_blockchain_category(category):
+    """Map item registration categories to blockchain categories."""
+    mapping = {
+        'CERTIFICATE':    'ACADEMIC',
+        'PHARMACEUTICAL': 'PHARMA',
+        'DOCUMENT':       'DOCUMENT',
+        'BANKNOTE':       'CURRENCY',
+    }
+    return mapping.get(category, category)
+
+
 def call_blockchain_service(item_id, category, hash_fields, issuer_id=None, issuer_name=None):
-    """
-    Call Blockchain Service to store hash on Ethereum.
-    Generates SHA-256 hash here and sends it to Blockchain Service.
-    Falls back to mock if service not available.
-    """
     item_hash = generate_hash(hash_fields)
+    blockchain_category = get_blockchain_category(category)
 
     try:
         response = requests.post(
             f"{settings.BLOCKCHAIN_SERVICE_URL}/api/blockchain/store/",
             json={
                 'item_hash':   item_hash,
-                'category':    category,
+                'category':    blockchain_category,
                 'issuer_id':   str(issuer_id) if issuer_id else 'unknown',
                 'issuer_name': issuer_name or 'Unknown Institution',
             },
@@ -55,46 +65,42 @@ def call_blockchain_service(item_id, category, hash_fields, issuer_id=None, issu
     except Exception:
         pass
 
-    # MOCK RESPONSE — fallback only
     return {
         'hash': item_hash,
         'transaction_hash': f'mock-tx-{str(item_id)[:8]}',
     }
 
 
-def call_output_service(item_id, category):
-    """
-    Call Auth Output Service to generate QR code and serial number.
-    SPRINT 1: Returns mock response.
-    SPRINT 2: Replace with real HTTP call.
-    """
+def call_output_service(item_id, category, item_hash, issuer_id):
     try:
         response = requests.post(
-            f"{settings.OUTPUT_SERVICE_URL}/api/outputs/generate/",
+            f"{settings.OUTPUT_SERVICE_URL}/api/output/generate/",
             json={
-                'item_id': str(item_id),
-                'category': category,
+                'item_id':   str(item_id),
+                'item_hash': item_hash,
+                'category':  category,
+                'issuer_id': str(issuer_id),
             },
             timeout=10
         )
         if response.status_code == 201:
-            return response.json()
+            data = response.json()
+            return {
+                'qr_code_url':   data.get('outputs', {}).get('qr_code_path', ''),
+                'serial_number': data.get('outputs', {}).get('serial_number', ''),
+            }
     except Exception:
         pass
 
-    # MOCK RESPONSE — Sprint 1 only
     return {
-        'qr_code_url': f'http://localhost:8005/media/qr/{item_id}.png',
+        'qr_code_url':   f'http://localhost:8005/media/qr/{item_id}.png',
         'serial_number': f'QNT-{timezone.now().year}-{category[:4]}-{str(item_id)[:8].upper()}',
     }
 
 
 def create_detail(item, category, data):
-    """
-    Create the category-specific detail record.
-    """
     if category == Item.Category.CERTIFICATE:
-        detail = CertificateDetail.objects.create(
+        return CertificateDetail.objects.create(
             item=item,
             student_name=data['student_name'],
             matricule=data['matricule'],
@@ -104,7 +110,7 @@ def create_detail(item, category, data):
             grade=data['grade'],
         )
     elif category == Item.Category.PHARMACEUTICAL:
-        detail = PharmaceuticalDetail.objects.create(
+        return PharmaceuticalDetail.objects.create(
             item=item,
             drug_name=data['drug_name'],
             batch_number=data['batch_number'],
@@ -114,7 +120,7 @@ def create_detail(item, category, data):
             factory_location=data['factory_location'],
         )
     elif category == Item.Category.DOCUMENT:
-        detail = DocumentDetail.objects.create(
+        return DocumentDetail.objects.create(
             item=item,
             document_type=data['document_type'],
             owner_name=data['owner_name'],
@@ -124,7 +130,7 @@ def create_detail(item, category, data):
             issue_date=data['issue_date'],
         )
     elif category == Item.Category.BANKNOTE:
-        detail = BanknoteDetail.objects.create(
+        return BanknoteDetail.objects.create(
             item=item,
             currency=data['currency'],
             denomination=data['denomination'],
@@ -133,31 +139,26 @@ def create_detail(item, category, data):
             issue_date=data['issue_date'],
             issuing_bank=data['issuing_bank'],
         )
-    return detail
 
 
+@swagger_auto_schema(
+    method='post',
+    request_body=RegisterItemSerializer,
+    responses={201: 'Item registered successfully'}
+)
 @api_view(['POST'])
-@permission_classes([IsAuthenticated])
+@permission_classes([AllowAny])
 def register_item(request):
     """
     Issuer registers a new item for authentication.
     POST /api/items/register/
     JWT required — must be ISSUER role.
     """
-    issuer_id = request.META.get('HTTP_X_USER_ID')
-    role = request.META.get('HTTP_X_USER_ROLE')
+    user, error = require_role(request, 'ISSUER')
+    if error:
+        return Response(error, status=status.HTTP_401_UNAUTHORIZED)
 
-    if not issuer_id:
-        return Response(
-            {'error': 'User ID not found in request headers.'},
-            status=status.HTTP_400_BAD_REQUEST
-        )
-
-    if role != 'ISSUER':
-        return Response(
-            {'error': 'Only issuers can register items.'},
-            status=status.HTTP_403_FORBIDDEN
-        )
+    issuer_id = user.get('user_id')
 
     serializer = RegisterItemSerializer(data=request.data)
     if not serializer.is_valid():
@@ -169,7 +170,6 @@ def register_item(request):
     data = serializer.validated_data
     category = data['category']
 
-    # Create the Item record
     item = Item.objects.create(
         issuer_id=uuid.UUID(issuer_id),
         institution_id=uuid.UUID(
@@ -179,23 +179,21 @@ def register_item(request):
         status=Item.Status.REGISTERED,
     )
 
-    # Create the category-specific detail record
     detail = create_detail(item, category, data)
-
-    # Get hash fields from detail model
     hash_fields = detail.get_hash_fields()
 
-    # Call Blockchain Service
     blockchain_response = call_blockchain_service(
         item.id, category, hash_fields,
         issuer_id=issuer_id,
         issuer_name=request.data.get('institution_name', 'Unknown Institution')
     )
 
-    # Call Auth Output Service (mock in Sprint 1)
-    output_response = call_output_service(item.id, category)
+    output_response = call_output_service(
+        item.id, category,
+        blockchain_response.get('hash'),
+        issuer_id
+    )
 
-    # Update item with blockchain and output data
     item.blockchain_hash = blockchain_response.get('hash')
     item.transaction_hash = blockchain_response.get('transaction_hash')
     item.qr_code_url = output_response.get('qr_code_url')
@@ -213,67 +211,81 @@ def register_item(request):
 
 
 @api_view(['GET'])
-@permission_classes([IsAuthenticated])
+@permission_classes([AllowAny])
 def my_items(request):
     """
     Issuer views all their registered items.
     GET /api/items/my-items/
     JWT required.
     """
-    issuer_id = request.META.get('HTTP_X_USER_ID')
+    user, error = require_auth(request)
+    if error:
+        return Response(error, status=status.HTTP_401_UNAUTHORIZED)
 
-    if not issuer_id:
-        return Response(
-            {'error': 'User ID not found in request headers.'},
-            status=status.HTTP_400_BAD_REQUEST
-        )
-
+    issuer_id = user.get('user_id')
     items = Item.objects.filter(issuer_id=issuer_id)
     serializer = ItemSerializer(items, many=True)
     return Response(serializer.data, status=status.HTTP_200_OK)
 
 
 @api_view(['GET'])
-@permission_classes([IsAuthenticated])
+@permission_classes([AllowAny])
 def item_detail(request, item_id):
     """
     Get full details of one item.
     GET /api/items/{item_id}/
-    JWT required.
+    JWT optional — internal service calls work without token.
     """
-    issuer_id = request.META.get('HTTP_X_USER_ID')
-    role = request.META.get('HTTP_X_USER_ROLE')
+    token = request.META.get('HTTP_AUTHORIZATION', '')
 
-    try:
-        if role == 'ADMIN':
+    if token:
+        user, error = require_auth(request)
+        if error:
+            return Response(error, status=status.HTTP_401_UNAUTHORIZED)
+        role = user.get('role')
+        issuer_id = user.get('user_id')
+        try:
+            if role == 'ADMIN':
+                item = Item.objects.get(id=item_id)
+            else:
+                item = Item.objects.get(id=item_id, issuer_id=issuer_id)
+        except Item.DoesNotExist:
+            return Response(
+                {'error': 'Item not found.'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+    else:
+        # Internal service call — no token, return item freely
+        try:
             item = Item.objects.get(id=item_id)
-        else:
-            item = Item.objects.get(id=item_id, issuer_id=issuer_id)
-    except Item.DoesNotExist:
-        return Response(
-            {'error': 'Item not found.'},
-            status=status.HTTP_404_NOT_FOUND
-        )
+        except Item.DoesNotExist:
+            return Response(
+                {'error': 'Item not found.'},
+                status=status.HTTP_404_NOT_FOUND
+            )
 
     serializer = ItemSerializer(item)
     return Response(serializer.data, status=status.HTTP_200_OK)
 
 
+@swagger_auto_schema(
+    method='put',
+    request_body=RevokeItemSerializer,
+    responses={200: 'Item revoked successfully'}
+)
 @api_view(['PUT'])
-@permission_classes([IsAuthenticated])
+@permission_classes([AllowAny])
 def revoke_item(request, item_id):
     """
     Issuer revokes a registered item.
     PUT /api/items/{item_id}/revoke/
-    JWT required — must be the issuer who registered the item.
+    JWT required.
     """
-    issuer_id = request.META.get('HTTP_X_USER_ID')
+    user, error = require_role(request, 'ISSUER')
+    if error:
+        return Response(error, status=status.HTTP_401_UNAUTHORIZED)
 
-    if not issuer_id:
-        return Response(
-            {'error': 'User ID not found in request headers.'},
-            status=status.HTTP_400_BAD_REQUEST
-        )
+    issuer_id = user.get('user_id')
 
     try:
         item = Item.objects.get(id=item_id, issuer_id=issuer_id)
@@ -320,13 +332,9 @@ def all_items(request):
     GET /api/items/all/
     Admin JWT required.
     """
-    role = request.META.get('HTTP_X_USER_ROLE')
-
-    if role != 'ADMIN':
-        return Response(
-            {'error': 'Only administrators can view all items.'},
-            status=status.HTTP_403_FORBIDDEN
-        )
+    user, error = require_role(request, 'ADMIN')
+    if error:
+        return Response(error, status=status.HTTP_403_FORBIDDEN)
 
     category = request.query_params.get('category')
     status_filter = request.query_params.get('status')
@@ -339,4 +347,25 @@ def all_items(request):
         items = items.filter(status=status_filter)
 
     serializer = ItemSerializer(items, many=True)
+    return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def item_by_serial(request, serial_number):
+    """
+    Get item details by serial number.
+    GET /api/items/serial/{serial_number}/
+    Called by Verification Service for serial/QR verification.
+    No authentication required.
+    """
+    try:
+        item = Item.objects.get(serial_number=serial_number)
+    except Item.DoesNotExist:
+        return Response(
+            {'error': 'Item not found.'},
+            status=status.HTTP_404_NOT_FOUND
+        )
+
+    serializer = ItemSerializer(item)
     return Response(serializer.data, status=status.HTTP_200_OK)

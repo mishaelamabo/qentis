@@ -7,6 +7,7 @@ urlpatterns = [
     path('my-items/', views.my_items, name='item-my-items'),
     path('<uuid:item_id>/', views.item_detail, name='item-detail'),
     path('<uuid:item_id>/revoke/', views.revoke_item, name='item-revoke'),
+    path('serial/<str:serial_number>/', views.item_by_serial, name='item-by-serial'),
 
     # Admin endpoints
     path('all/', views.all_items, name='item-all'),

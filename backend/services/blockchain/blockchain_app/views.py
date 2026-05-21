@@ -2,6 +2,8 @@ from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
+from drf_yasg.utils import swagger_auto_schema
+from drf_yasg import openapi
 
 from .models import BlockchainRecord
 from .serializers import (
@@ -17,6 +19,11 @@ from .contract import (
 )
 
 
+@swagger_auto_schema(
+    method='post',
+    request_body=StoreHashSerializer,
+    responses={201: 'Hash stored successfully'}
+)
 @api_view(['POST'])
 @permission_classes([AllowAny])
 def store_hash(request):
@@ -33,7 +40,6 @@ def store_hash(request):
     data      = serializer.validated_data
     item_hash = data['item_hash']
 
-    # Check if this hash already exists in our database
     if BlockchainRecord.objects.filter(item_hash=item_hash).exists():
         return Response(
             {'error': 'This hash is already registered.'},
@@ -48,7 +54,6 @@ def store_hash(request):
             issuer_name = data['issuer_name'],
         )
 
-        # Save a local record in PostgreSQL as backup
         record = BlockchainRecord.objects.create(
             item_hash   = item_hash,
             category    = data['category'],
@@ -74,6 +79,11 @@ def store_hash(request):
         )
 
 
+@swagger_auto_schema(
+    method='post',
+    request_body=VerifyHashSerializer,
+    responses={200: 'Verification result'}
+)
 @api_view(['POST'])
 @permission_classes([AllowAny])
 def verify_hash(request):
@@ -130,13 +140,17 @@ def verify_hash(request):
         )
 
 
+@swagger_auto_schema(
+    method='post',
+    request_body=RevokeHashSerializer,
+    responses={200: 'Hash revoked successfully'}
+)
 @api_view(['POST'])
 @permission_classes([AllowAny])
 def revoke_hash(request):
     """
     Revoke an item hash on the blockchain.
     POST /api/blockchain/revoke/
-    Called by the Item Registration Service when an issuer revokes an item.
     """
     serializer = RevokeHashSerializer(data=request.data)
 
@@ -183,7 +197,6 @@ def health_check(request):
     """
     Health check endpoint.
     GET /api/blockchain/health/
-    Used by Docker and Kubernetes to confirm the service is running.
     """
     try:
         from .web3_client import get_web3

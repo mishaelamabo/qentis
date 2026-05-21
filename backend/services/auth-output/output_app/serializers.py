@@ -11,7 +11,7 @@ class GenerateOutputSerializer(serializers.Serializer):
     item_hash = serializers.CharField(max_length=64)
     category  = serializers.ChoiceField(choices=GeneratedOutput.Category.choices)
     issuer_id = serializers.CharField(max_length=255)
-    item_name = serializers.CharField(max_length=255)
+    item_name = serializers.CharField(max_length=255, required=False, default='')
 
 
 class VerifySignatureSerializer(serializers.Serializer):

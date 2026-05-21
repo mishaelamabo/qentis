@@ -8,9 +8,11 @@ from django.conf import settings
 from django.core.mail import send_mail
 from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes, parser_classes
-from rest_framework.permissions import AllowAny, IsAuthenticated
+from rest_framework.permissions import AllowAny
 from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
 from rest_framework.response import Response
+from drf_yasg.utils import swagger_auto_schema
+from drf_yasg import openapi
 
 from .models import VerificationLog, FraudFlag
 from .serializers import (
@@ -23,56 +25,86 @@ from .serializers import (
     FraudFlagSerializer,
     ReportItemSerializer,
 )
+from .auth_helper import require_role
 
 
 def get_redis_client():
-    """Get Redis connection."""
     return redis.from_url(settings.REDIS_URL)
 
 
 def get_verifier_ip(request):
-    """Extract verifier IP address from request."""
     x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
     if x_forwarded_for:
         return x_forwarded_for.split(',')[0]
     return request.META.get('REMOTE_ADDR')
 
 
-def check_blockchain(item_id=None, serial_number=None, blockchain_hash=None):
+def get_item_hash(item_id):
     """
-    Call Blockchain Service to verify an item.
-    SPRINT 1: Returns mock response.
-    SPRINT 2: Replace with real HTTP call.
+    Get blockchain hash for an item from Item Registration Service.
     """
     try:
-        if item_id:
-            url = f"{settings.BLOCKCHAIN_SERVICE_URL}/api/blockchain/verify/{item_id}/"
-        else:
-            url = f"{settings.BLOCKCHAIN_SERVICE_URL}/api/blockchain/verify/serial/{serial_number}/"
+        response = requests.get(
+            f"{settings.ITEM_SERVICE_URL}/api/items/{item_id}/",
+            timeout=5
+        )
+        if response.status_code == 200:
+            return response.json().get('blockchain_hash')
+    except Exception:
+        pass
+    return None
 
-        response = requests.get(url, timeout=10)
+
+def get_item_by_serial(serial_number):
+    """
+    Get item details by serial number from Item Registration Service.
+    """
+    try:
+        response = requests.get(
+            f"{settings.ITEM_SERVICE_URL}/api/items/serial/{serial_number}/",
+            timeout=5
+        )
         if response.status_code == 200:
             return response.json()
     except Exception:
         pass
-
-    # MOCK RESPONSE — Sprint 1 only
-    return {
-        'exists': True,
-        'timestamp': timezone.now().isoformat(),
-        'item_details': {
-            'category': 'CERTIFICATE',
-            'issuer': 'Mock Institution',
-            'registered_at': timezone.now().isoformat(),
-        }
-    }
+    return None
 
 
-def get_cached_result(item_id):
-    """Check Redis cache for a previous verification result."""
+def check_blockchain(blockchain_hash):
+    """
+    Call Blockchain Service to verify a hash.
+    """
+    try:
+        response = requests.post(
+            f"{settings.BLOCKCHAIN_SERVICE_URL}/api/blockchain/verify/",
+            json={'item_hash': blockchain_hash},
+            timeout=10
+        )
+        if response.status_code == 200:
+            data = response.json()
+            if data.get('status') == 'AUTHENTIC':
+                return {
+                    'exists': True,
+                    'timestamp': data.get('timestamp'),
+                    'item_details': {
+                        'category':      data.get('category'),
+                        'issuer':        data.get('issuer_name'),
+                        'issuer_id':     data.get('issuer_id'),
+                        'registered_at': data.get('timestamp'),
+                    }
+                }
+            else:
+                return {'exists': False}
+    except Exception:
+        pass
+    return {'exists': False}
+
+
+def get_cached_result(key):
     try:
         r = get_redis_client()
-        cached = r.get(f'verify:{item_id}')
+        cached = r.get(f'verify:{key}')
         if cached:
             return json.loads(cached)
     except Exception:
@@ -80,12 +112,11 @@ def get_cached_result(item_id):
     return None
 
 
-def cache_result(item_id, result):
-    """Store verification result in Redis with TTL."""
+def cache_result(key, result):
     try:
         r = get_redis_client()
         r.setex(
-            f'verify:{item_id}',
+            f'verify:{key}',
             settings.CACHE_TTL,
             json.dumps(result)
         )
@@ -94,10 +125,6 @@ def cache_result(item_id, result):
 
 
 def check_fraud_pattern(item_id, issuer_id=None):
-    """
-    Check if this item has been verified suspiciously often.
-    If count exceeds FRAUD_THRESHOLD in 60 minutes — create FraudFlag.
-    """
     window_start = timezone.now() - timedelta(hours=1)
     window_end = timezone.now()
 
@@ -124,25 +151,7 @@ def check_fraud_pattern(item_id, issuer_id=None):
             )
 
 
-def send_issuer_notification(issuer_email, item_id, method):
-    """
-    Send email notification to issuer when their item is verified.
-    Uses Django send_mail with Mailtrap SMTP locally.
-    """
-    try:
-        send_mail(
-            subject='Your item was verified on Qentis',
-            message=f'Your item {item_id} was verified using {method} method on {timezone.now().strftime("%Y-%m-%d %H:%M")} UTC.',
-            from_email=settings.DEFAULT_FROM_EMAIL,
-            recipient_list=[issuer_email],
-            fail_silently=True,
-        )
-    except Exception:
-        pass
-
-
 def log_verification(item_id, issuer_id, method, result, input_data, verifier_ip):
-    """Save verification attempt to database."""
     return VerificationLog.objects.create(
         item_id=item_id,
         issuer_id=issuer_id,
@@ -154,7 +163,6 @@ def log_verification(item_id, issuer_id, method, result, input_data, verifier_ip
 
 
 def build_result(result, item_id, method, message, item_details=None):
-    """Build standard verification response."""
     return {
         'result': result,
         'item_id': str(item_id) if item_id else None,
@@ -165,6 +173,65 @@ def build_result(result, item_id, method, message, item_details=None):
     }
 
 
+@swagger_auto_schema(
+    method='post',
+    request_body=openapi.Schema(
+        type=openapi.TYPE_OBJECT,
+        required=['item_hash'],
+        properties={
+            'item_hash': openapi.Schema(
+                type=openapi.TYPE_STRING,
+                description='SHA-256 hash of the item'
+            ),
+        }
+    ),
+    responses={200: 'Verification result'}
+)
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def verify_hash(request):
+    """
+    Verify item via blockchain hash.
+    POST /api/verify/hash/
+    No authentication required.
+    """
+    item_hash = request.data.get('item_hash')
+    verifier_ip = get_verifier_ip(request)
+
+    if not item_hash:
+        return Response(
+            {'error': 'item_hash is required.'},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+
+    cached = get_cached_result(f'hash:{item_hash}')
+    if cached:
+        return Response(cached, status=status.HTTP_200_OK)
+
+    blockchain_response = check_blockchain(item_hash)
+
+    if blockchain_response.get('exists'):
+        result = VerificationLog.Result.AUTHENTIC
+        message = 'This item is AUTHENTIC. Hash verified on blockchain.'
+        item_details = blockchain_response.get('item_details')
+    else:
+        result = VerificationLog.Result.NOT_AUTHENTIC
+        message = 'Hash NOT found on blockchain. This item could not be verified.'
+        item_details = None
+
+    response_data = build_result(
+        result, item_hash, 'HASH', message, item_details
+    )
+    cache_result(f'hash:{item_hash}', response_data)
+
+    return Response(response_data, status=status.HTTP_200_OK)
+
+
+@swagger_auto_schema(
+    method='post',
+    request_body=VerifyQRSerializer,
+    responses={200: 'Verification result'}
+)
 @api_view(['POST'])
 @permission_classes([AllowAny])
 def verify_qr(request):
@@ -175,65 +242,74 @@ def verify_qr(request):
     """
     serializer = VerifyQRSerializer(data=request.data)
     if not serializer.is_valid():
-        return Response(
-            serializer.errors,
-            status=status.HTTP_400_BAD_REQUEST
-        )
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     qr_data = serializer.validated_data['qr_data']
     verifier_ip = get_verifier_ip(request)
 
+    item_id = None
+    blockchain_hash = None
+
     try:
+        # Try to parse as UUID — QR contains item_id
         item_id = uuid.UUID(qr_data)
+        # Get blockchain hash from Item Registration Service
+        blockchain_hash = get_item_hash(item_id)
     except ValueError:
+        # QR contains hash directly
+        blockchain_hash = qr_data
+
+    if not blockchain_hash:
         log_verification(
-            None, None, VerificationLog.Method.QR,
+            item_id, None, VerificationLog.Method.QR,
             VerificationLog.Result.NOT_AUTHENTIC,
             qr_data, verifier_ip
         )
         return Response(
             build_result(
                 VerificationLog.Result.NOT_AUTHENTIC,
-                None, VerificationLog.Method.QR,
-                'Invalid QR code format. This item could not be verified.'
+                item_id, VerificationLog.Method.QR,
+                'Could not retrieve item details for verification.'
             ),
             status=status.HTTP_200_OK
         )
 
-    # Check cache first
-    cached = get_cached_result(item_id)
+    cached = get_cached_result(f'qr:{blockchain_hash}')
     if cached:
         return Response(cached, status=status.HTTP_200_OK)
 
-    # Check blockchain
-    blockchain_response = check_blockchain(item_id=item_id)
+    blockchain_response = check_blockchain(blockchain_hash)
 
     if blockchain_response.get('exists'):
         result = VerificationLog.Result.AUTHENTIC
-        message = 'This item is AUTHENTIC. It was registered on Qentis.'
+        message = 'This item is AUTHENTIC. Verified on blockchain.'
         item_details = blockchain_response.get('item_details')
     else:
         result = VerificationLog.Result.NOT_AUTHENTIC
-        message = 'This item could NOT be verified. No matching record found.'
+        message = 'This item could NOT be verified.'
         item_details = None
 
-    # Log verification
-    log = log_verification(
+    log_verification(
         item_id, None, VerificationLog.Method.QR,
         result, qr_data, verifier_ip
     )
 
-    # Cache result
-    response_data = build_result(result, item_id, VerificationLog.Method.QR, message, item_details)
-    cache_result(item_id, response_data)
+    response_data = build_result(
+        result, item_id, VerificationLog.Method.QR, message, item_details
+    )
+    cache_result(f'qr:{blockchain_hash}', response_data)
 
-    # Check fraud pattern
     if result == VerificationLog.Result.AUTHENTIC:
         check_fraud_pattern(item_id)
 
     return Response(response_data, status=status.HTTP_200_OK)
 
 
+@swagger_auto_schema(
+    method='post',
+    request_body=VerifySerialSerializer,
+    responses={200: 'Verification result'}
+)
 @api_view(['POST'])
 @permission_classes([AllowAny])
 def verify_serial(request):
@@ -244,32 +320,46 @@ def verify_serial(request):
     """
     serializer = VerifySerialSerializer(data=request.data)
     if not serializer.is_valid():
-        return Response(
-            serializer.errors,
-            status=status.HTTP_400_BAD_REQUEST
-        )
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     serial_number = serializer.validated_data['serial_number']
     verifier_ip = get_verifier_ip(request)
 
-    # Check cache
     cached = get_cached_result(f'serial:{serial_number}')
     if cached:
         return Response(cached, status=status.HTTP_200_OK)
 
-    # Check blockchain
-    blockchain_response = check_blockchain(serial_number=serial_number)
+    # Look up item by serial number in Item Registration Service
+    item_data = get_item_by_serial(serial_number)
+
+    if not item_data:
+        log_verification(
+            None, None, VerificationLog.Method.SERIAL,
+            VerificationLog.Result.NOT_AUTHENTIC,
+            serial_number, verifier_ip
+        )
+        return Response(
+            build_result(
+                VerificationLog.Result.NOT_AUTHENTIC,
+                None, VerificationLog.Method.SERIAL,
+                'Serial number not found in our records.'
+            ),
+            status=status.HTTP_200_OK
+        )
+
+    blockchain_hash = item_data.get('blockchain_hash')
+    item_id = item_data.get('id')
+
+    blockchain_response = check_blockchain(blockchain_hash)
 
     if blockchain_response.get('exists'):
         result = VerificationLog.Result.AUTHENTIC
-        message = 'This item is AUTHENTIC. Serial number verified on blockchain.'
+        message = 'Serial number verified. Item is AUTHENTIC.'
         item_details = blockchain_response.get('item_details')
-        item_id = blockchain_response.get('item_id')
     else:
         result = VerificationLog.Result.NOT_AUTHENTIC
-        message = 'Serial number NOT found. This item could not be verified.'
+        message = 'Serial number found but blockchain verification failed.'
         item_details = None
-        item_id = None
 
     log_verification(
         item_id, None, VerificationLog.Method.SERIAL,
@@ -281,7 +371,7 @@ def verify_serial(request):
     )
     cache_result(f'serial:{serial_number}', response_data)
 
-    if result == VerificationLog.Result.AUTHENTIC and item_id:
+    if result == VerificationLog.Result.AUTHENTIC:
         check_fraud_pattern(item_id)
 
     return Response(response_data, status=status.HTTP_200_OK)
@@ -295,28 +385,20 @@ def verify_signature(request):
     Verify item via Digital Signature.
     POST /api/verify/signature/
     No authentication required.
-    User uploads a signed PDF.
     """
     serializer = VerifySignatureSerializer(data=request.data)
     if not serializer.is_valid():
-        return Response(
-            serializer.errors,
-            status=status.HTTP_400_BAD_REQUEST
-        )
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     document = serializer.validated_data['document']
     verifier_ip = get_verifier_ip(request)
 
     try:
-        from cryptography.hazmat.primitives import hashes, serialization
-        from cryptography.hazmat.primitives.asymmetric import padding
-        from cryptography.exceptions import InvalidSignature
         import hashlib
-
         document_bytes = document.read()
         document_hash = hashlib.sha256(document_bytes).hexdigest()
 
-        blockchain_response = check_blockchain(item_id=document_hash[:32])
+        blockchain_response = check_blockchain(document_hash)
 
         if blockchain_response.get('exists'):
             result = VerificationLog.Result.AUTHENTIC
@@ -329,7 +411,7 @@ def verify_signature(request):
 
     except Exception:
         result = VerificationLog.Result.UNVERIFIABLE
-        message = 'Could not process the document. Please ensure it is a valid signed PDF.'
+        message = 'Could not process the document.'
         item_details = None
 
     log_verification(
@@ -351,14 +433,10 @@ def verify_ocr(request):
     Verify banknote via OCR Photo Scan.
     POST /api/verify/ocr/
     No authentication required.
-    User uploads a photo of the banknote.
     """
     serializer = VerifyOCRSerializer(data=request.data)
     if not serializer.is_valid():
-        return Response(
-            serializer.errors,
-            status=status.HTTP_400_BAD_REQUEST
-        )
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     image = serializer.validated_data['image']
     verifier_ip = get_verifier_ip(request)
@@ -373,12 +451,8 @@ def verify_ocr(request):
         image_bytes = image.read()
         pil_image = Image.open(io.BytesIO(image_bytes))
         cv_image = cv2.cvtColor(np.array(pil_image), cv2.COLOR_RGB2BGR)
-
         gray = cv2.cvtColor(cv_image, cv2.COLOR_BGR2GRAY)
-        gray = cv2.threshold(
-            gray, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU
-        )[1]
-
+        gray = cv2.threshold(gray, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)[1]
         extracted_text = pytesseract.image_to_string(gray)
         serial_number = extracted_text.strip().replace(' ', '').replace('\n', '')
 
@@ -387,27 +461,34 @@ def verify_ocr(request):
                 build_result(
                     VerificationLog.Result.UNVERIFIABLE,
                     None, VerificationLog.Method.OCR,
-                    'Could not extract serial number from image. Please take a clearer photo.',
+                    'Could not extract serial number from image.',
                 ),
                 status=status.HTTP_200_OK
             )
 
-        blockchain_response = check_blockchain(serial_number=serial_number)
+        # Look up item by serial number
+        item_data = get_item_by_serial(serial_number)
+        if item_data:
+            blockchain_hash = item_data.get('blockchain_hash')
+            item_id = item_data.get('id')
+            blockchain_response = check_blockchain(blockchain_hash)
+        else:
+            blockchain_response = {'exists': False}
+            item_id = None
 
         if blockchain_response.get('exists'):
             result = VerificationLog.Result.AUTHENTIC
-            message = f'Serial number {serial_number} verified. Banknote is AUTHENTIC.'
+            message = f'Banknote is AUTHENTIC. Serial {serial_number} verified.'
             item_details = blockchain_response.get('item_details')
-            item_id = blockchain_response.get('item_id')
         else:
             result = VerificationLog.Result.NOT_AUTHENTIC
-            message = f'Serial number {serial_number} not found. Banknote could NOT be verified.'
+            message = f'Serial number {serial_number} not found.'
             item_details = None
             item_id = None
 
-    except Exception as e:
+    except Exception:
         result = VerificationLog.Result.UNVERIFIABLE
-        message = 'Error processing image. Please try again with a clearer photo.'
+        message = 'Error processing image.'
         item_details = None
         item_id = None
         serial_number = ''
@@ -437,14 +518,10 @@ def verify_watermark(request):
     Verify document via Watermark Detection.
     POST /api/verify/watermark/
     No authentication required.
-    User uploads a photo of the document.
     """
     serializer = VerifyWatermarkSerializer(data=request.data)
     if not serializer.is_valid():
-        return Response(
-            serializer.errors,
-            status=status.HTTP_400_BAD_REQUEST
-        )
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     image = serializer.validated_data['image']
     verifier_ip = get_verifier_ip(request)
@@ -456,7 +533,6 @@ def verify_watermark(request):
 
         image_bytes = image.read()
         pil_image = Image.open(io.BytesIO(image_bytes))
-
         hidden_message = lsb.reveal(pil_image)
 
         if not hidden_message:
@@ -464,13 +540,26 @@ def verify_watermark(request):
                 build_result(
                     VerificationLog.Result.NOT_AUTHENTIC,
                     None, VerificationLog.Method.WATERMARK,
-                    'No watermark detected. This document may not be authentic.',
+                    'No watermark detected.',
                 ),
                 status=status.HTTP_200_OK
             )
 
+        # Hidden message is item_id — get hash from item service
         item_id = uuid.UUID(hidden_message)
-        blockchain_response = check_blockchain(item_id=item_id)
+        blockchain_hash = get_item_hash(item_id)
+
+        if not blockchain_hash:
+            return Response(
+                build_result(
+                    VerificationLog.Result.NOT_AUTHENTIC,
+                    item_id, VerificationLog.Method.WATERMARK,
+                    'Watermark found but item not found in records.',
+                ),
+                status=status.HTTP_200_OK
+            )
+
+        blockchain_response = check_blockchain(blockchain_hash)
 
         if blockchain_response.get('exists'):
             result = VerificationLog.Result.AUTHENTIC
@@ -478,12 +567,12 @@ def verify_watermark(request):
             item_details = blockchain_response.get('item_details')
         else:
             result = VerificationLog.Result.NOT_AUTHENTIC
-            message = 'Watermark found but no matching record. Document could NOT be verified.'
+            message = 'Watermark found but blockchain verification failed.'
             item_details = None
 
     except Exception:
         result = VerificationLog.Result.UNVERIFIABLE
-        message = 'Could not process watermark. Please upload a clearer image.'
+        message = 'Could not process watermark.'
         item_details = None
         item_id = None
 
@@ -512,19 +601,20 @@ def verification_history(request, item_id):
     GET /api/verify/history/{item_id}/
     Admin JWT required.
     """
-    role = request.META.get('HTTP_X_USER_ROLE')
-
-    if role != 'ADMIN':
-        return Response(
-            {'error': 'Only administrators can view verification history.'},
-            status=status.HTTP_403_FORBIDDEN
-        )
+    user, error = require_role(request, 'ADMIN')
+    if error:
+        return Response(error, status=status.HTTP_403_FORBIDDEN)
 
     logs = VerificationLog.objects.filter(item_id=item_id)
     serializer = VerificationLogSerializer(logs, many=True)
     return Response(serializer.data, status=status.HTTP_200_OK)
 
 
+@swagger_auto_schema(
+    method='post',
+    request_body=ReportItemSerializer,
+    responses={201: 'Item reported successfully'}
+)
 @api_view(['POST'])
 @permission_classes([AllowAny])
 def report_item(request):
@@ -535,10 +625,7 @@ def report_item(request):
     """
     serializer = ReportItemSerializer(data=request.data)
     if not serializer.is_valid():
-        return Response(
-            serializer.errors,
-            status=status.HTTP_400_BAD_REQUEST
-        )
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     item_id = serializer.validated_data['item_id']
     reason = serializer.validated_data['reason']
@@ -559,26 +646,22 @@ def report_item(request):
     )
 
     return Response(
-        {'message': 'Item reported successfully. Our team will investigate.'},
+        {'message': 'Item reported successfully.'},
         status=status.HTTP_201_CREATED
     )
 
 
 @api_view(['GET'])
-@permission_classes([IsAuthenticated])
+@permission_classes([AllowAny])
 def fraud_flags(request):
     """
     Get all fraud flags.
     GET /api/verify/flags/
     Admin JWT required.
     """
-    role = request.META.get('HTTP_X_USER_ROLE')
-
-    if role != 'ADMIN':
-        return Response(
-            {'error': 'Only administrators can view fraud flags.'},
-            status=status.HTTP_403_FORBIDDEN
-        )
+    user, error = require_role(request, 'ADMIN')
+    if error:
+        return Response(error, status=status.HTTP_403_FORBIDDEN)
 
     flags = FraudFlag.objects.all()
     serializer = FraudFlagSerializer(flags, many=True)

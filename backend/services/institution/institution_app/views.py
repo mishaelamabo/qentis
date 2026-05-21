@@ -2,47 +2,39 @@ import uuid
 from django.utils import timezone
 from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes
-from rest_framework.permissions import AllowAny, IsAuthenticated
+from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
+from drf_yasg.utils import swagger_auto_schema
+from drf_yasg import openapi
 
 from .models import Institution, InstitutionDocument
 from .serializers import (
     InstitutionSerializer,
     InstitutionApplySerializer,
-    InstitutionStatusSerializer,
     AdminInstitutionSerializer,
 )
+from .auth_helper import require_auth, require_role
 
 
-def get_user_from_token(request):
-    """
-    Extract user information from the JWT token.
-    The token is validated by SimpleJWT automatically.
-    We read the user_id from the token payload.
-    """
-    return {
-        'user_id': str(request.user.id) if hasattr(request, 'user') else None,
-        'role': getattr(request.user, 'role', None)
-    }
-
-
+@swagger_auto_schema(
+    method='post',
+    request_body=InstitutionApplySerializer,
+    responses={201: 'Application submitted successfully'}
+)
 @api_view(['POST'])
-@permission_classes([IsAuthenticated])
+@permission_classes([AllowAny])
 def apply(request):
     """
     Issuer submits institution application.
     POST /api/institution/apply/
-    JWT token required — must be an ISSUER role.
+    JWT token required.
     """
-    user_id = request.META.get('HTTP_X_USER_ID')
+    user, error = require_role(request, 'ISSUER')
+    if error:
+        return Response(error, status=status.HTTP_401_UNAUTHORIZED)
 
-    if not user_id:
-        return Response(
-            {'error': 'User ID not found in request headers.'},
-            status=status.HTTP_400_BAD_REQUEST
-        )
+    user_id = user.get('user_id')
 
-    # Check if this user already has an application
     existing = Institution.objects.filter(user_id=user_id).first()
     if existing:
         return Response(
@@ -61,7 +53,6 @@ def apply(request):
             status=Institution.Status.PENDING
         )
 
-        # Handle document uploads
         documents = request.FILES.getlist('documents')
         doc_type = request.data.get('document_type', 'OTHER')
         for doc in documents:
@@ -84,24 +75,20 @@ def apply(request):
 
 
 @api_view(['GET'])
-@permission_classes([IsAuthenticated])
+@permission_classes([AllowAny])
 def application_status(request):
     """
     Issuer checks their own application status.
     GET /api/institution/status/
     JWT token required.
     """
-    user_id = request.META.get('HTTP_X_USER_ID')
+    user, error = require_auth(request)
+    if error:
+        return Response(error, status=status.HTTP_401_UNAUTHORIZED)
 
-    if not user_id:
-        return Response(
-            {'error': 'User ID not found in request headers.'},
-            status=status.HTTP_400_BAD_REQUEST
-        )
+    user_id = user.get('user_id')
 
-    institution = Institution.objects.filter(
-        user_id=user_id
-    ).first()
+    institution = Institution.objects.filter(user_id=user_id).first()
 
     if not institution:
         return Response(
@@ -114,20 +101,16 @@ def application_status(request):
 
 
 @api_view(['GET'])
-@permission_classes([IsAuthenticated])
+@permission_classes([AllowAny])
 def pending_applications(request):
     """
     Admin views all pending applications.
     GET /api/institution/pending/
     Admin JWT required.
     """
-    role = request.META.get('HTTP_X_USER_ROLE')
-
-    if role != 'ADMIN':
-        return Response(
-            {'error': 'Only administrators can view pending applications.'},
-            status=status.HTTP_403_FORBIDDEN
-        )
+    user, error = require_role(request, 'ADMIN')
+    if error:
+        return Response(error, status=status.HTTP_403_FORBIDDEN)
 
     institutions = Institution.objects.filter(
         status=Institution.Status.PENDING
@@ -137,42 +120,37 @@ def pending_applications(request):
 
 
 @api_view(['GET'])
-@permission_classes([IsAuthenticated])
+@permission_classes([AllowAny])
 def all_institutions(request):
     """
     Admin views all institutions.
     GET /api/institution/all/
     Admin JWT required.
     """
-    role = request.META.get('HTTP_X_USER_ROLE')
-
-    if role != 'ADMIN':
-        return Response(
-            {'error': 'Only administrators can view all institutions.'},
-            status=status.HTTP_403_FORBIDDEN
-        )
+    user, error = require_role(request, 'ADMIN')
+    if error:
+        return Response(error, status=status.HTTP_403_FORBIDDEN)
 
     institutions = Institution.objects.all()
     serializer = AdminInstitutionSerializer(institutions, many=True)
     return Response(serializer.data, status=status.HTTP_200_OK)
 
 
+@swagger_auto_schema(
+    method='put',
+    responses={200: 'Institution approved successfully'}
+)
 @api_view(['PUT'])
-@permission_classes([IsAuthenticated])
+@permission_classes([AllowAny])
 def approve_institution(request, institution_id):
     """
     Admin approves an institution application.
     PUT /api/institution/{id}/approve/
     Admin JWT required.
     """
-    role = request.META.get('HTTP_X_USER_ROLE')
-    admin_id = request.META.get('HTTP_X_USER_ID')
-
-    if role != 'ADMIN':
-        return Response(
-            {'error': 'Only administrators can approve institutions.'},
-            status=status.HTTP_403_FORBIDDEN
-        )
+    user, error = require_role(request, 'ADMIN')
+    if error:
+        return Response(error, status=status.HTTP_403_FORBIDDEN)
 
     try:
         institution = Institution.objects.get(id=institution_id)
@@ -189,7 +167,7 @@ def approve_institution(request, institution_id):
         )
 
     institution.status = Institution.Status.APPROVED
-    institution.approved_by = uuid.UUID(admin_id)
+    institution.approved_by = uuid.UUID(user.get('user_id'))
     institution.approved_at = timezone.now()
     institution.save()
 
@@ -203,22 +181,28 @@ def approve_institution(request, institution_id):
     )
 
 
+@swagger_auto_schema(
+    method='put',
+    request_body=openapi.Schema(
+        type=openapi.TYPE_OBJECT,
+        required=['reason'],
+        properties={
+            'reason': openapi.Schema(type=openapi.TYPE_STRING),
+        }
+    ),
+    responses={200: 'Institution rejected'}
+)
 @api_view(['PUT'])
-@permission_classes([IsAuthenticated])
+@permission_classes([AllowAny])
 def reject_institution(request, institution_id):
     """
     Admin rejects an institution application.
     PUT /api/institution/{id}/reject/
-    Admin JWT required — must provide rejection reason.
+    Admin JWT required.
     """
-    role = request.META.get('HTTP_X_USER_ROLE')
-    admin_id = request.META.get('HTTP_X_USER_ID')
-
-    if role != 'ADMIN':
-        return Response(
-            {'error': 'Only administrators can reject institutions.'},
-            status=status.HTTP_403_FORBIDDEN
-        )
+    user, error = require_role(request, 'ADMIN')
+    if error:
+        return Response(error, status=status.HTTP_403_FORBIDDEN)
 
     try:
         institution = Institution.objects.get(id=institution_id)
@@ -236,7 +220,7 @@ def reject_institution(request, institution_id):
         )
 
     institution.status = Institution.Status.REJECTED
-    institution.approved_by = uuid.UUID(admin_id)
+    institution.approved_by = uuid.UUID(user.get('user_id'))
     institution.approved_at = timezone.now()
     institution.rejection_reason = reason
     institution.save()
@@ -251,22 +235,28 @@ def reject_institution(request, institution_id):
     )
 
 
+@swagger_auto_schema(
+    method='put',
+    request_body=openapi.Schema(
+        type=openapi.TYPE_OBJECT,
+        required=['reason'],
+        properties={
+            'reason': openapi.Schema(type=openapi.TYPE_STRING),
+        }
+    ),
+    responses={200: 'Institution revoked'}
+)
 @api_view(['PUT'])
-@permission_classes([IsAuthenticated])
+@permission_classes([AllowAny])
 def revoke_institution(request, institution_id):
     """
     Admin revokes an approved institution.
     PUT /api/institution/{id}/revoke/
-    Admin JWT required — must provide revocation reason.
+    Admin JWT required.
     """
-    role = request.META.get('HTTP_X_USER_ROLE')
-    admin_id = request.META.get('HTTP_X_USER_ID')
-
-    if role != 'ADMIN':
-        return Response(
-            {'error': 'Only administrators can revoke institutions.'},
-            status=status.HTTP_403_FORBIDDEN
-        )
+    user, error = require_role(request, 'ADMIN')
+    if error:
+        return Response(error, status=status.HTTP_403_FORBIDDEN)
 
     try:
         institution = Institution.objects.get(id=institution_id)
@@ -290,7 +280,7 @@ def revoke_institution(request, institution_id):
         )
 
     institution.status = Institution.Status.REVOKED
-    institution.approved_by = uuid.UUID(admin_id)
+    institution.approved_by = uuid.UUID(user.get('user_id'))
     institution.rejection_reason = reason
     institution.save()
 
@@ -305,20 +295,16 @@ def revoke_institution(request, institution_id):
 
 
 @api_view(['GET'])
-@permission_classes([IsAuthenticated])
+@permission_classes([AllowAny])
 def institution_detail(request, institution_id):
     """
     Get full details of one institution.
     GET /api/institution/{id}/
     Admin JWT required.
     """
-    role = request.META.get('HTTP_X_USER_ROLE')
-
-    if role != 'ADMIN':
-        return Response(
-            {'error': 'Only administrators can view institution details.'},
-            status=status.HTTP_403_FORBIDDEN
-        )
+    user, error = require_role(request, 'ADMIN')
+    if error:
+        return Response(error, status=status.HTTP_403_FORBIDDEN)
 
     try:
         institution = Institution.objects.get(id=institution_id)
