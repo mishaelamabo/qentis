@@ -47,11 +47,11 @@ const Auth = {
 
     guard: (requiredRole = null) => {
         if (!Auth.isLoggedIn()) {
-            window.location.href = '/login.html';
+            window.location.href = '/frontend/login.html';
             return;
         }
         if (requiredRole && Auth.getRole() !== requiredRole) {
-            window.location.href = '/login.html';
+            window.location.href = '/frontend/login.html';
         }
     },
 
@@ -70,7 +70,7 @@ const Auth = {
             // Clear even if server call fails
         } finally {
             Auth.clear();
-            window.location.href = '/login.html';
+            window.location.href = '/frontend/login.html';
         }
     },
 };
@@ -104,7 +104,7 @@ async function apiRequest(url, options = {}) {
 
         if (response.status === 401) {
             Auth.clear();
-            window.location.href = '/login.html';
+            window.location.href = '/frontend/login.html';
             return;
         }
 
@@ -128,11 +128,11 @@ async function apiRequest(url, options = {}) {
 
 function redirectByRole(role) {
     const map = {
-        ISSUER:   '/pages/issuer/dashboard.html',
-        ADMIN:    '/pages/admin/dashboard.html',
-        VERIFIER: '/pages/verifier/verify.html',
+        ISSUER:   '/frontend/pages/issuer/dashboard.html',
+        ADMIN:    '/frontend/pages/admin/dashboard.html',
+        VERIFIER: '/frontend/pages/verifier/verify.html',
     };
-    window.location.href = map[role] || '/login.html';
+    window.location.href = map[role] || '/frontend/login.html';
 }
 
 // ─────────────────────────────────────────────
