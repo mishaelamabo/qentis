@@ -2,8 +2,6 @@
 // Qentis — My Items Page
 // ─────────────────────────────────────────────
 
-Auth.guard('ISSUER');
-
 let allItems     = [];
 let selectedItem = null;
 
@@ -66,66 +64,79 @@ function viewItem(itemId) {
     selectedItem = allItems.find(i => i.id === itemId);
     if (!selectedItem) return;
 
+    // Reset all category sections
+    document.getElementById('modal-cert').style.display   = 'none';
+    document.getElementById('modal-pharma').style.display = 'none';
+    document.getElementById('modal-doc').style.display    = 'none';
+    document.getElementById('modal-bank').style.display   = 'none';
+    document.getElementById('modal-divider').style.display = 'none';
+
+    // Set title
     document.getElementById('modal-title').textContent = `${selectedItem.category} — ${selectedItem.serial_number || 'No serial'}`;
 
-    // Build detail rows based on category
-    let detailHtml = `
-        <div class="detail-row"><span class="detail-label">ID</span><span class="detail-value td-mono">${selectedItem.id}</span></div>
-        <div class="detail-row"><span class="detail-label">Category</span><span class="detail-value">${selectedItem.category}</span></div>
-        <div class="detail-row"><span class="detail-label">Status</span><span class="detail-value">${selectedItem.status}</span></div>
-        <div class="detail-row"><span class="detail-label">Serial number</span><span class="detail-value td-mono">${selectedItem.serial_number || '—'}</span></div>
-        <div class="detail-row"><span class="detail-label">Blockchain hash</span><span class="detail-value td-mono">${selectedItem.blockchain_hash || '—'}</span></div>
-        <div class="detail-row"><span class="detail-label">Transaction</span><span class="detail-value td-mono">${selectedItem.transaction_hash || '—'}</span></div>
-        <div class="detail-row"><span class="detail-label">Registered</span><span class="detail-value">${formatDate(selectedItem.registered_at)}</span></div>
-    `;
-
-    // Category-specific details
-    if (selectedItem.certificate_detail) {
-        const d = selectedItem.certificate_detail;
-        detailHtml += `
-            <hr/>
-            <div class="detail-row"><span class="detail-label">Student name</span><span class="detail-value">${d.student_name}</span></div>
-            <div class="detail-row"><span class="detail-label">Matricule</span><span class="detail-value">${d.matricule}</span></div>
-            <div class="detail-row"><span class="detail-label">Degree</span><span class="detail-value">${d.degree}</span></div>
-            <div class="detail-row"><span class="detail-label">Grade</span><span class="detail-value">${d.grade}</span></div>
-            <div class="detail-row"><span class="detail-label">Graduation date</span><span class="detail-value">${formatDate(d.graduation_date)}</span></div>
-        `;
-    } else if (selectedItem.pharmaceutical_detail) {
-        const d = selectedItem.pharmaceutical_detail;
-        detailHtml += `
-            <hr/>
-            <div class="detail-row"><span class="detail-label">Drug name</span><span class="detail-value">${d.drug_name}</span></div>
-            <div class="detail-row"><span class="detail-label">Batch number</span><span class="detail-value">${d.batch_number}</span></div>
-            <div class="detail-row"><span class="detail-label">Manufacturer</span><span class="detail-value">${d.manufacturer}</span></div>
-            <div class="detail-row"><span class="detail-label">Factory location</span><span class="detail-value">${d.factory_location}</span></div>
-            <div class="detail-row"><span class="detail-label">Production date</span><span class="detail-value">${formatDate(d.production_date)}</span></div>
-            <div class="detail-row"><span class="detail-label">Expiry date</span><span class="detail-value">${formatDate(d.expiry_date)}</span></div>
-        `;
-    } else if (selectedItem.document_detail) {
-        const d = selectedItem.document_detail;
-        detailHtml += `
-            <hr/>
-            <div class="detail-row"><span class="detail-label">Document type</span><span class="detail-value">${d.document_type}</span></div>
-            <div class="detail-row"><span class="detail-label">Owner name</span><span class="detail-value">${d.owner_name}</span></div>
-            <div class="detail-row"><span class="detail-label">Issuing authority</span><span class="detail-value">${d.issuing_authority}</span></div>
-            <div class="detail-row"><span class="detail-label">Reference number</span><span class="detail-value">${d.reference_number}</span></div>
-            <div class="detail-row"><span class="detail-label">Location</span><span class="detail-value">${d.location}</span></div>
-            <div class="detail-row"><span class="detail-label">Issue date</span><span class="detail-value">${formatDate(d.issue_date)}</span></div>
-        `;
-    } else if (selectedItem.banknote_detail) {
-        const d = selectedItem.banknote_detail;
-        detailHtml += `
-            <hr/>
-            <div class="detail-row"><span class="detail-label">Currency</span><span class="detail-value">${d.currency}</span></div>
-            <div class="detail-row"><span class="detail-label">Denomination</span><span class="detail-value">${d.denomination}</span></div>
-            <div class="detail-row"><span class="detail-label">Serial number</span><span class="detail-value">${d.serial_number}</span></div>
-            <div class="detail-row"><span class="detail-label">Series</span><span class="detail-value">${d.series}</span></div>
-            <div class="detail-row"><span class="detail-label">Issue date</span><span class="detail-value">${formatDate(d.issue_date)}</span></div>
-            <div class="detail-row"><span class="detail-label">Issuing bank</span><span class="detail-value">${d.issuing_bank}</span></div>
-        `;
+    // Set QR code
+    if (selectedItem.qr_code_url) {
+        document.getElementById('qr-image').src         = selectedItem.qr_code_url;
+        document.getElementById('qr-download').href     = selectedItem.qr_code_url;
+        document.getElementById('qr-download').download = `QNT-${selectedItem.serial_number}.png`;
+        document.getElementById('qr-section').style.display = 'block';
+    } else {
+        document.getElementById('qr-section').style.display = 'none';
     }
 
-    document.getElementById('modal-body').innerHTML = detailHtml;
+    // Set common fields
+    document.getElementById('modal-id').textContent       = selectedItem.id;
+    document.getElementById('modal-category').textContent = selectedItem.category;
+    document.getElementById('modal-status').textContent   = selectedItem.status;
+    document.getElementById('modal-serial').textContent   = selectedItem.serial_number   || '—';
+    document.getElementById('modal-hash').textContent     = selectedItem.blockchain_hash || '—';
+    document.getElementById('modal-tx').textContent       = selectedItem.transaction_hash || '—';
+    document.getElementById('modal-date').textContent     = formatDate(selectedItem.registered_at);
+
+    // Set category-specific fields
+    if (selectedItem.certificate_detail) {
+        const d = selectedItem.certificate_detail;
+        document.getElementById('modal-cert-student').textContent   = d.student_name;
+        document.getElementById('modal-cert-matricule').textContent = d.matricule;
+        document.getElementById('modal-cert-degree').textContent    = d.degree;
+        document.getElementById('modal-cert-grade').textContent     = d.grade;
+        document.getElementById('modal-cert-date').textContent      = formatDate(d.graduation_date);
+        document.getElementById('modal-cert').style.display         = 'block';
+        document.getElementById('modal-divider').style.display      = 'block';
+
+    } else if (selectedItem.pharmaceutical_detail) {
+        const d = selectedItem.pharmaceutical_detail;
+        document.getElementById('modal-pharma-drug').textContent  = d.drug_name;
+        document.getElementById('modal-pharma-batch').textContent = d.batch_number;
+        document.getElementById('modal-pharma-mfr').textContent   = d.manufacturer;
+        document.getElementById('modal-pharma-loc').textContent   = d.factory_location;
+        document.getElementById('modal-pharma-prod').textContent  = formatDate(d.production_date);
+        document.getElementById('modal-pharma-exp').textContent   = formatDate(d.expiry_date);
+        document.getElementById('modal-pharma').style.display     = 'block';
+        document.getElementById('modal-divider').style.display    = 'block';
+
+    } else if (selectedItem.document_detail) {
+        const d = selectedItem.document_detail;
+        document.getElementById('modal-doc-type').textContent      = d.document_type;
+        document.getElementById('modal-doc-owner').textContent     = d.owner_name;
+        document.getElementById('modal-doc-authority').textContent = d.issuing_authority;
+        document.getElementById('modal-doc-ref').textContent       = d.reference_number;
+        document.getElementById('modal-doc-loc').textContent       = d.location;
+        document.getElementById('modal-doc-date').textContent      = formatDate(d.issue_date);
+        document.getElementById('modal-doc').style.display         = 'block';
+        document.getElementById('modal-divider').style.display     = 'block';
+
+    } else if (selectedItem.banknote_detail) {
+        const d = selectedItem.banknote_detail;
+        document.getElementById('modal-bank-currency').textContent = d.currency;
+        document.getElementById('modal-bank-denom').textContent    = d.denomination;
+        document.getElementById('modal-bank-serial').textContent   = d.serial_number;
+        document.getElementById('modal-bank-series').textContent   = d.series;
+        document.getElementById('modal-bank-date').textContent     = formatDate(d.issue_date);
+        document.getElementById('modal-bank-issuer').textContent   = d.issuing_bank;
+        document.getElementById('modal-bank').style.display        = 'block';
+        document.getElementById('modal-divider').style.display     = 'block';
+    }
 
     // Hide revoke button if already revoked
     document.getElementById('revoke-btn').style.display =
@@ -166,14 +177,10 @@ async function confirmRevoke() {
 
     try {
         await ItemsAPI.revokeItem(selectedItem.id, reason);
-
-        // Update local state
         const idx = allItems.findIndex(i => i.id === selectedItem.id);
         if (idx !== -1) allItems[idx].status = 'REVOKED';
-
         closeRevokeModal();
         renderItems(allItems);
-
     } catch (e) {
         showAlert('revoke-alert', 'Failed to revoke item. Please try again.', 'error');
     } finally {
