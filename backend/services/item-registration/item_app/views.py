@@ -1,3 +1,4 @@
+import os
 import uuid
 import hashlib
 import requests
@@ -25,6 +26,16 @@ from .serializers import (
 from .auth_helper import require_auth, require_role
 
 
+# ── Institution type → allowed item category mapping ──
+INSTITUTION_CATEGORY_MAP = {
+    'UNIVERSITY':   'CERTIFICATE',
+    'HOSPITAL':     'PHARMACEUTICAL',
+    'MANUFACTURER': 'PHARMACEUTICAL',
+    'BANK':         'BANKNOTE',
+    'NOTARY':       'DOCUMENT',
+}
+
+
 def generate_hash(field_values):
     """Generate SHA-256 hash from concatenated field values."""
     return hashlib.sha256(field_values.encode()).hexdigest()
@@ -39,6 +50,25 @@ def get_blockchain_category(category):
         'BANKNOTE':       'CURRENCY',
     }
     return mapping.get(category, category)
+
+
+def get_allowed_category(institution_id):
+    """
+    Get allowed item category for an institution
+    by calling the Institution Service.
+    """
+    try:
+        response = requests.get(
+            f"{settings.INSTITUTION_SERVICE_URL}/api/institution/{institution_id}/",
+            timeout=5
+        )
+        if response.status_code == 200:
+            data = response.json()
+            institution_type = data.get('institution_type')
+            return INSTITUTION_CATEGORY_MAP.get(institution_type)
+    except Exception:
+        pass
+    return None
 
 
 def call_blockchain_service(item_id, category, hash_fields, issuer_id=None, issuer_name=None):
@@ -78,15 +108,21 @@ def call_output_service(item_id, category, item_hash, issuer_id):
             json={
                 'item_id':   str(item_id),
                 'item_hash': item_hash,
-                'category':  category,
+                'category':  get_blockchain_category(category),
                 'issuer_id': str(issuer_id),
             },
             timeout=10
         )
         if response.status_code == 201:
             data = response.json()
+            qr_path = data.get('outputs', {}).get('qr_code_path', '')
+            if qr_path and qr_path.startswith('/app/media/'):
+                qr_filename = os.path.basename(qr_path)
+                qr_url = f"{settings.OUTPUT_SERVICE_URL}/media/qrcodes/{qr_filename}"
+            else:
+                qr_url = qr_path
             return {
-                'qr_code_url':   data.get('outputs', {}).get('qr_code_path', ''),
+                'qr_code_url':   qr_url,
                 'serial_number': data.get('outputs', {}).get('serial_number', ''),
             }
     except Exception:
@@ -170,10 +206,23 @@ def register_item(request):
     data = serializer.validated_data
     category = data['category']
 
+    # ── Validate category matches institution type ──
+    institution_id_str = request.data.get('institution_id')
+    if institution_id_str:
+        allowed_category = get_allowed_category(institution_id_str)
+        if allowed_category and category != allowed_category:
+            return Response(
+                {
+                    'error': f'Your institution can only register '
+                             f'{allowed_category} items, not {category}.'
+                },
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
     item = Item.objects.create(
         issuer_id=uuid.UUID(issuer_id),
         institution_id=uuid.UUID(
-            request.data.get('institution_id', str(uuid.uuid4()))
+            institution_id_str or str(uuid.uuid4())
         ),
         category=category,
         status=Item.Status.REGISTERED,
@@ -255,7 +304,6 @@ def item_detail(request, item_id):
                 status=status.HTTP_404_NOT_FOUND
             )
     else:
-        # Internal service call — no token, return item freely
         try:
             item = Item.objects.get(id=item_id)
         except Item.DoesNotExist:
