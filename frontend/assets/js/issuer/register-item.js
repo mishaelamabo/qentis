@@ -2,19 +2,41 @@
 // Qentis — Register Item Page
 // ─────────────────────────────────────────────
 
-Auth.guard('ISSUER');
-
 let selectedCategory = null;
 let institutionId    = null;
 let institutionName  = null;
 
-// Load institution ID on page load
+const INSTITUTION_CATEGORY_MAP = {
+    'UNIVERSITY':   'CERTIFICATE',
+    'HOSPITAL':     'PHARMACEUTICAL',
+    'MANUFACTURER': 'PHARMACEUTICAL',
+    'BANK':         'BANKNOTE',
+    'NOTARY':       'DOCUMENT',
+};
+
 async function loadInstitution() {
     try {
         const data = await InstitutionAPI.getStatus();
-        if (data && data.institution) {
-            institutionId   = data.institution.id;
-            institutionName = data.institution.name;
+        if (data && data.id) {
+            institutionId   = data.id;
+            institutionName = data.name;
+
+            const allowedCategory = INSTITUTION_CATEGORY_MAP[data.institution_type];
+            if (allowedCategory) {
+                document.querySelectorAll('.category-card').forEach(card => {
+                    card.style.display = 'none';
+                });
+                const allowed = document.querySelector(
+                    `.category-card[onclick="selectCategory('${allowedCategory}')"]`
+                );
+                if (allowed) {
+                    allowed.style.display  = 'block';
+                    allowed.style.margin   = '0 auto';
+                    allowed.style.maxWidth = '240px';
+                }
+            }
+        } else {
+            showAlert('alert', 'Could not load institution info. Please contact support.', 'error');
         }
     } catch (e) {
         showAlert('alert', 'Could not load institution info. Please contact support.', 'error');
@@ -33,7 +55,7 @@ function selectCategory(category) {
 
 function goBackToCategory() {
     selectedCategory = null;
-    document.getElementById('step-form').style.display    = 'none';
+    document.getElementById('step-form').style.display     = 'none';
     document.getElementById('step-category').style.display = 'block';
     hideAlert('alert');
 }
@@ -111,30 +133,13 @@ async function handleRegisterItem() {
         const data = await ItemsAPI.register(itemData);
 
         if (data && data.item) {
-            document.getElementById('step-form').style.display    = 'none';
-            document.getElementById('step-success').style.display = 'block';
-            document.getElementById('success-details').innerHTML  = `
-                <div class="detail-row">
-                    <span class="detail-label">Serial number</span>
-                    <span class="detail-value">${data.item.serial_number}</span>
-                </div>
-                <div class="detail-row">
-                    <span class="detail-label">Blockchain hash</span>
-                    <span class="detail-value hash-value">${formatHash(data.item.blockchain_hash)}</span>
-                </div>
-                <div class="detail-row">
-                    <span class="detail-label">Transaction</span>
-                    <span class="detail-value hash-value">${formatHash(data.item.transaction_hash)}</span>
-                </div>
-                <div class="detail-row">
-                    <span class="detail-label">Category</span>
-                    <span class="detail-value">${data.item.category}</span>
-                </div>
-                <div class="detail-row">
-                    <span class="detail-label">Status</span>
-                    <span class="detail-value">${data.item.status}</span>
-                </div>
-            `;
+            document.getElementById('step-form').style.display     = 'none';
+            document.getElementById('step-success').style.display  = 'block';
+            document.getElementById('success-serial').textContent   = data.item.serial_number;
+            document.getElementById('success-hash').textContent     = formatHash(data.item.blockchain_hash);
+            document.getElementById('success-tx').textContent       = formatHash(data.item.transaction_hash);
+            document.getElementById('success-category').textContent = data.item.category;
+            document.getElementById('success-status').textContent   = data.item.status;
         }
 
     } catch (error) {
