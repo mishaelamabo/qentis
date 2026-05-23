@@ -2,8 +2,6 @@
 // Qentis — Account Page
 // ─────────────────────────────────────────────
 
-Auth.guard('ISSUER');
-
 async function loadProfile() {
     try {
         const user = Auth.getUser();
@@ -13,9 +11,10 @@ async function loadProfile() {
         }
 
         const data = await InstitutionAPI.getStatus();
-        if (data && data.institution) {
-            document.getElementById('profile-institution').textContent = data.institution.name   || '—';
-            document.getElementById('profile-status').textContent      = data.institution.status || '—';
+        if (data && data.name) {
+            document.getElementById('profile-institution').textContent = data.name             || '—';
+            document.getElementById('profile-type').textContent        = data.institution_type || '—';
+            document.getElementById('profile-status').textContent      = data.status           || '—';
         }
 
         document.getElementById('profile-loading').style.display = 'none';
@@ -28,9 +27,9 @@ async function loadProfile() {
 }
 
 async function handleChangePassword() {
-    const old_password        = document.getElementById('old-password').value;
-    const new_password        = document.getElementById('new-password').value;
-    const new_password2       = document.getElementById('new-password2').value;
+    const old_password  = document.getElementById('old-password').value;
+    const new_password  = document.getElementById('new-password').value;
+    const new_password2 = document.getElementById('new-password2').value;
 
     if (!old_password || !new_password || !new_password2) {
         showAlert('password-alert', 'Please fill in all fields.', 'error');

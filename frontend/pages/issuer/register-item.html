@@ -209,7 +209,28 @@
         <div class="success-icon">⛓</div>
         <h3>Item registered on blockchain!</h3>
         <p>Your item has been successfully registered and verified.</p>
-        <div class="success-details" id="success-details"></div>
+        <div class="success-details">
+          <div class="detail-row">
+            <span class="detail-label">Serial number</span>
+            <span class="detail-value" id="success-serial">—</span>
+          </div>
+          <div class="detail-row">
+            <span class="detail-label">Blockchain hash</span>
+            <span class="detail-value hash-value" id="success-hash">—</span>
+          </div>
+          <div class="detail-row">
+            <span class="detail-label">Transaction</span>
+            <span class="detail-value hash-value" id="success-tx">—</span>
+          </div>
+          <div class="detail-row">
+            <span class="detail-label">Category</span>
+            <span class="detail-value" id="success-category">—</span>
+          </div>
+          <div class="detail-row">
+            <span class="detail-label">Status</span>
+            <span class="detail-value" id="success-status">—</span>
+          </div>
+        </div>
         <div class="success-actions">
           <button class="btn-q-primary" onclick="registerAnother()">Register another item</button>
           <a href="my-items.html" class="btn-q-outline">View my items</a>
