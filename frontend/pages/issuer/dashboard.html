@@ -52,18 +52,20 @@
       <div class="q-spinner loading-spinner"></div>
       <div>Loading items...</div>
     </div>
-    <table class="q-table" id="recent-items-table" style="display:none;">
-      <thead>
-        <tr>
-          <th>Item</th>
-          <th>Category</th>
-          <th>Registered</th>
-          <th>Status</th>
-          <th>Actions</th>
-        </tr>
-      </thead>
-      <tbody id="recent-items-body"></tbody>
-    </table>
+    <div class="q-table-wrap">
+      <table class="q-table" id="recent-items-table" style="display:none;">
+        <thead>
+          <tr>
+            <th>Item</th>
+            <th>Category</th>
+            <th>Registered</th>
+            <th>Status</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody id="recent-items-body"></tbody>
+      </table>
+    </div>
     <div id="recent-items-empty" class="q-empty-state" style="display:none;">
       <div class="q-empty-icon">📦</div>
       <p>No items registered yet.</p>

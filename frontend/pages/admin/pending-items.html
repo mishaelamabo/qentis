@@ -1,12 +1,12 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>My Items — Qentis</title>
-  <link href="../../assets/css/issuer/my-items.css" rel="stylesheet"/>
+  <title>Pending Items — Qentis Admin</title>
+  <link href="../../assets/css/admin/pending-items.css" rel="stylesheet"/>
 </head>
-<body data-role="ISSUER" data-sidebar="issuer" data-page="my-items">
+<body data-role="ADMIN" data-sidebar="admin" data-page="pending-items">
 
 <script src="../../assets/js/api/config.js"></script>
 <script src="../../assets/js/api/auth.js"></script>
@@ -16,59 +16,38 @@
 
 <main class="q-main">
   <div class="q-page-header">
-    <h1>My Items</h1>
-    <p>All items you have registered on the blockchain</p>
+    <h1>Pending Items</h1>
+    <p>Review and approve item registrations before they go on the blockchain</p>
   </div>
 
-  <!-- Filters -->
-  <div class="q-filters">
-    <select id="filter-category" class="q-select q-select--sm" onchange="applyFilters()">
-      <option value="">All categories</option>
-      <option value="CERTIFICATE">Certificate</option>
-      <option value="PHARMACEUTICAL">Pharmaceutical</option>
-      <option value="DOCUMENT">Document</option>
-      <option value="BANKNOTE">Banknote</option>
-    </select>
-    <select id="filter-status" class="q-select q-select--sm" onchange="applyFilters()">
-      <option value="">All statuses</option>
-      <option value="REGISTERED">Registered</option>
-      <option value="REVOKED">Revoked</option>
-    </select>
-  </div>
+  <div id="alert" class="q-alert"></div>
 
-  <!-- Items table -->
   <div class="q-card">
-    <div class="q-card-header">
-      <div class="q-card-title q-card-title--no-margin">Registered items</div>
-      <a href="register-item.html" class="btn-q-primary btn-sm">+ Register new item</a>
-    </div>
-    <div id="items-loading" class="q-loading-state">
+    <div id="pending-loading" class="q-loading-state">
       <div class="q-spinner loading-spinner"></div>
-      <div>Loading items...</div>
+      <div>Loading pending items...</div>
     </div>
-    <div class="q-table-wrap">
-      <table class="q-table" id="items-table" style="display:none;">
-        <thead>
-          <tr>
-            <th>Category</th>
-            <th>Serial number</th>
-            <th>Blockchain hash</th>
-            <th>Registered</th>
-            <th>Status</th>
-            <th>Actions</th>
-          </tr>
-        </thead>
-        <tbody id="items-body"></tbody>
-      </table>
+
+    <div id="pending-empty" class="q-empty-state" style="display:none;">
+      <div class="q-empty-icon">✅</div>
+      <p>No pending items. All caught up!</p>
     </div>
-    <div id="items-empty" class="q-empty-state" style="display:none;">
-      <div class="q-empty-icon">📦</div>
-      <p>No items registered yet.</p>
-      <a href="register-item.html" class="btn-q-primary">Register your first item</a>
-    </div>
+
+    <table class="q-table" id="pending-table" style="display:none;">
+      <thead>
+        <tr>
+          <th>Category</th>
+          <th>Issuer</th>
+          <th>Details</th>
+          <th>Submitted</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody id="pending-body"></tbody>
+    </table>
   </div>
 
-  <!-- Item detail modal -->
+  <!-- Item detail + approve/reject modal -->
   <div id="item-modal" class="q-modal" style="display:none;">
     <div class="q-modal-backdrop" onclick="closeModal()"></div>
     <div class="q-modal-content">
@@ -77,14 +56,6 @@
         <button class="q-modal-close" onclick="closeModal()">✕</button>
       </div>
       <div id="modal-body" class="q-modal-body">
-
-        <!-- QR Code section -->
-        <div id="qr-section" class="qr-section" style="display:none;">
-          <img id="qr-image" src="" alt="QR Code" class="qr-image"/>
-          <a id="qr-download" href="#" download="" class="btn-q-outline btn-sm">
-            ⬇ Download QR Code
-          </a>
-        </div>
 
         <!-- Common details -->
         <div class="detail-row">
@@ -96,27 +67,19 @@
           <span class="detail-value" id="modal-category">—</span>
         </div>
         <div class="detail-row">
-          <span class="detail-label">Status</span>
-          <span class="detail-value" id="modal-status">—</span>
+          <span class="detail-label">Issuer ID</span>
+          <span class="detail-value td-mono" id="modal-issuer">—</span>
         </div>
         <div class="detail-row">
-          <span class="detail-label">Serial number</span>
-          <span class="detail-value td-mono" id="modal-serial">—</span>
+          <span class="detail-label">Institution ID</span>
+          <span class="detail-value td-mono" id="modal-institution">—</span>
         </div>
         <div class="detail-row">
-          <span class="detail-label">Blockchain hash</span>
-          <span class="detail-value td-mono" id="modal-hash">—</span>
-        </div>
-        <div class="detail-row">
-          <span class="detail-label">Transaction</span>
-          <span class="detail-value td-mono" id="modal-tx">—</span>
-        </div>
-        <div class="detail-row">
-          <span class="detail-label">Registered</span>
+          <span class="detail-label">Submitted</span>
           <span class="detail-value" id="modal-date">—</span>
         </div>
 
-        <hr id="modal-divider" style="display:none; border-color: var(--q-border); margin: 12px 0;"/>
+        <hr style="border-color: var(--q-border); margin: 12px 0;"/>
 
         <!-- Certificate detail -->
         <div id="modal-cert" style="display:none;">
@@ -125,6 +88,7 @@
           <div class="detail-row"><span class="detail-label">Degree</span><span class="detail-value" id="modal-cert-degree">—</span></div>
           <div class="detail-row"><span class="detail-label">Grade</span><span class="detail-value" id="modal-cert-grade">—</span></div>
           <div class="detail-row"><span class="detail-label">Graduation date</span><span class="detail-value" id="modal-cert-date">—</span></div>
+          <div class="detail-row"><span class="detail-label">Institution</span><span class="detail-value" id="modal-cert-institution">—</span></div>
         </div>
 
         <!-- Pharmaceutical detail -->
@@ -157,40 +121,27 @@
           <div class="detail-row"><span class="detail-label">Issuing bank</span><span class="detail-value" id="modal-bank-issuer">—</span></div>
         </div>
 
+        <!-- Reject reason input -->
+        <div id="reject-section" style="display:none; margin-top: 16px;">
+          <div class="q-form-group">
+            <label class="q-label">Reason for rejection *</label>
+            <input type="text" id="reject-reason" class="q-input" placeholder="e.g. Invalid document, suspicious data"/>
+          </div>
+          <div id="reject-alert" class="q-alert"></div>
+        </div>
+
       </div>
       <div class="q-modal-footer">
         <button class="btn-q-outline" onclick="closeModal()">Close</button>
-        <button id="revoke-btn" class="btn-q-danger" onclick="showRevokeConfirm()">Revoke item</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- Revoke confirm modal -->
-  <div id="revoke-modal" class="q-modal" style="display:none;">
-    <div class="q-modal-backdrop" onclick="closeRevokeModal()"></div>
-    <div class="q-modal-content q-modal-content--sm">
-      <div class="q-modal-header">
-        <h3>Revoke item</h3>
-        <button class="q-modal-close" onclick="closeRevokeModal()">✕</button>
-      </div>
-      <div class="q-modal-body">
-        <p>Are you sure you want to revoke this item? This action cannot be undone.</p>
-        <div class="q-form-group mt-2">
-          <label class="q-label">Reason for revocation *</label>
-          <input type="text" id="revoke-reason" class="q-input" placeholder="e.g. Lost document, error in data"/>
-        </div>
-        <div id="revoke-alert" class="q-alert"></div>
-      </div>
-      <div class="q-modal-footer">
-        <button class="btn-q-outline" onclick="closeRevokeModal()">Cancel</button>
-        <button id="confirm-revoke-btn" class="btn-q-danger" onclick="confirmRevoke()">Confirm revoke</button>
+        <button id="show-reject-btn" class="btn-q-danger" onclick="showRejectSection()">Reject</button>
+        <button id="confirm-reject-btn" class="btn-q-danger" style="display:none;" onclick="confirmReject()">Confirm Reject</button>
+        <button id="approve-btn" class="btn-q-primary" onclick="confirmApprove()">✓ Approve</button>
       </div>
     </div>
   </div>
 
 </main>
 
-<script src="../../assets/js/issuer/my-items.js"></script>
-
+<script src="../../assets/js/admin/pending-items.js"></script>
 </body>
 </html>

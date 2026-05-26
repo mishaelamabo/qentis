@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>All Issuers — Qentis</title>
+  <title>All Issuers — Qentis Admin</title>
   <link href="../../assets/css/admin/all-issuers.css" rel="stylesheet"/>
 </head>
 <body data-role="ADMIN" data-sidebar="admin" data-page="all-issuers">
@@ -19,10 +19,34 @@
     <p>View and manage all registered institutions</p>
   </div>
 
-  <div id="alert"></div>
+  <div id="alert" class="q-alert"></div>
 
   <div class="q-card">
-    <div id="issuers-list"><p class="q-loading">Loading...</p></div>
+    <div id="issuers-loading" class="q-loading-state">
+      <div class="q-spinner"></div>
+      <div>Loading issuers...</div>
+    </div>
+
+    <div id="issuers-empty" class="q-empty-state" style="display:none;">
+      <p>No institutions found.</p>
+    </div>
+
+    <div class="q-table-wrap" id="issuers-table-wrap" style="display:none;">
+      <table class="q-table" id="issuers-table">
+        <thead>
+          <tr>
+            <th>Institution</th>
+            <th>Type</th>
+            <th>Country</th>
+            <th>Email</th>
+            <th>Status</th>
+            <th>Registered</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody id="issuers-body"></tbody>
+      </table>
+    </div>
   </div>
 </main>
 
