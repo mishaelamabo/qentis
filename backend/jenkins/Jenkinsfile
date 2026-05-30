@@ -2,10 +2,12 @@ pipeline {
     agent any
 
     environment {
-        VPS_IP   = '207.180.217.238'
-        VPS_USER = 'mishael'
-        APP_DIR  = '/home/mishael/qentis'
-        REPO_URL = 'https://github.com/DanielLeo09/qentis.git'
+        VPS_IP       = '207.180.217.238'
+        VPS_USER     = 'mishael'
+        APP_DIR      = '/home/mishael/qentis'
+        REPO_URL     = 'https://github.com/DanielLeo09/qentis.git'
+        DOCKER_USER  = 'nebamishael'
+        DOCKER_PASS  = credentials('dockerhub-credentials')
     }
 
     stages {
@@ -45,11 +47,30 @@ pipeline {
             }
         }
 
-        stage('Build Docker Images') {
+        stage('Build & Push to Docker Hub') {
             steps {
                 sh '''
-                    cd backend
-                    docker compose build --no-cache
+                    echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin
+
+                    cd backend/services
+
+                    docker build -t nebamishael/qentis-user-auth:latest        ./user-auth
+                    docker build -t nebamishael/qentis-institution:latest      ./institution
+                    docker build -t nebamishael/qentis-item-registration:latest ./item-registration
+                    docker build -t nebamishael/qentis-blockchain:latest       ./blockchain
+                    docker build -t nebamishael/qentis-auth-output:latest      ./auth-output
+                    docker build -t nebamishael/qentis-verification:latest     ./verification
+                    docker build -t nebamishael/qentis-admin-analytics:latest  ./admin-analytics
+
+                    docker push nebamishael/qentis-user-auth:latest
+                    docker push nebamishael/qentis-institution:latest
+                    docker push nebamishael/qentis-item-registration:latest
+                    docker push nebamishael/qentis-blockchain:latest
+                    docker push nebamishael/qentis-auth-output:latest
+                    docker push nebamishael/qentis-verification:latest
+                    docker push nebamishael/qentis-admin-analytics:latest
+
+                    docker logout
                 '''
             }
         }
