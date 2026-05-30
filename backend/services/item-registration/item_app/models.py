@@ -5,14 +5,16 @@ from django.db import models
 class Item(models.Model):
 
     class Category(models.TextChoices):
-        CERTIFICATE = 'CERTIFICATE', 'Academic Certificate'
+        CERTIFICATE    = 'CERTIFICATE',    'Academic Certificate'
         PHARMACEUTICAL = 'PHARMACEUTICAL', 'Pharmaceutical Product'
-        DOCUMENT = 'DOCUMENT', 'Official Document'
-        BANKNOTE = 'BANKNOTE', 'Currency / Banknote'
+        DOCUMENT       = 'DOCUMENT',       'Official Document'
+        BANKNOTE       = 'BANKNOTE',       'Currency / Banknote'
 
     class Status(models.TextChoices):
+        PENDING    = 'PENDING',    'Pending Approval'
         REGISTERED = 'REGISTERED', 'Registered'
-        REVOKED = 'REVOKED', 'Revoked'
+        REJECTED   = 'REJECTED',   'Rejected'
+        REVOKED    = 'REVOKED',    'Revoked'
 
     id = models.UUIDField(
         primary_key=True,
@@ -32,7 +34,7 @@ class Item(models.Model):
     status = models.CharField(
         max_length=10,
         choices=Status.choices,
-        default=Status.REGISTERED
+        default=Status.PENDING
     )
     blockchain_hash = models.CharField(
         max_length=64,
@@ -46,12 +48,16 @@ class Item(models.Model):
         null=True,
         help_text="Ethereum transaction hash"
     )
-    qr_code_url = models.URLField(blank=True, null=True)
-    serial_number = models.CharField(max_length=100, blank=True, null=True)
-    registered_at = models.DateTimeField(auto_now_add=True)
-    revoked_at = models.DateTimeField(null=True, blank=True)
-    revoke_reason = models.TextField(null=True, blank=True)
-    updated_at = models.DateTimeField(auto_now=True)
+    qr_code_url    = models.URLField(blank=True, null=True)
+    serial_number  = models.CharField(max_length=100, blank=True, null=True)
+    registered_at  = models.DateTimeField(auto_now_add=True)
+    revoked_at     = models.DateTimeField(null=True, blank=True)
+    revoke_reason  = models.TextField(null=True, blank=True)
+    rejected_at    = models.DateTimeField(null=True, blank=True)
+    reject_reason  = models.TextField(null=True, blank=True)
+    approved_at    = models.DateTimeField(null=True, blank=True)
+    approved_by    = models.UUIDField(null=True, blank=True)
+    updated_at     = models.DateTimeField(auto_now=True)
 
     class Meta:
         db_table = 'items'
@@ -73,12 +79,12 @@ class CertificateDetail(models.Model):
         on_delete=models.CASCADE,
         related_name='certificate_detail'
     )
-    student_name = models.CharField(max_length=255)
-    matricule = models.CharField(max_length=100)
-    degree = models.CharField(max_length=255)
+    student_name     = models.CharField(max_length=255)
+    matricule        = models.CharField(max_length=100)
+    degree           = models.CharField(max_length=255)
     institution_name = models.CharField(max_length=255)
-    graduation_date = models.DateField()
-    grade = models.CharField(max_length=100)
+    graduation_date  = models.DateField()
+    grade            = models.CharField(max_length=100)
 
     class Meta:
         db_table = 'certificate_details'
@@ -87,7 +93,6 @@ class CertificateDetail(models.Model):
         return f"{self.student_name} - {self.degree}"
 
     def get_hash_fields(self):
-        """Returns concatenated fields for SHA-256 hashing"""
         return f"{self.student_name}{self.matricule}{self.degree}{self.institution_name}{self.graduation_date}{self.grade}"
 
 
@@ -103,11 +108,11 @@ class PharmaceuticalDetail(models.Model):
         on_delete=models.CASCADE,
         related_name='pharmaceutical_detail'
     )
-    drug_name = models.CharField(max_length=255)
-    batch_number = models.CharField(max_length=100)
-    manufacturer = models.CharField(max_length=255)
-    production_date = models.DateField()
-    expiry_date = models.DateField()
+    drug_name        = models.CharField(max_length=255)
+    batch_number     = models.CharField(max_length=100)
+    manufacturer     = models.CharField(max_length=255)
+    production_date  = models.DateField()
+    expiry_date      = models.DateField()
     factory_location = models.CharField(max_length=255)
 
     class Meta:
@@ -132,12 +137,33 @@ class DocumentDetail(models.Model):
         on_delete=models.CASCADE,
         related_name='document_detail'
     )
-    document_type = models.CharField(max_length=100)
-    owner_name = models.CharField(max_length=255)
+    # Common fields
+    document_type     = models.CharField(max_length=100)
+    owner_name        = models.CharField(max_length=255)
     issuing_authority = models.CharField(max_length=255)
-    reference_number = models.CharField(max_length=100)
-    location = models.CharField(max_length=255)
-    issue_date = models.DateField()
+    reference_number  = models.CharField(max_length=100)  # NIC Number
+    card_number       = models.CharField(max_length=100, blank=True, null=True)
+    location          = models.CharField(max_length=255)
+    issue_date        = models.DateField()
+
+    # New CNI specific fields
+    owner_surname     = models.CharField(max_length=255, blank=True, null=True)
+    owner_given_names = models.CharField(max_length=255, blank=True, null=True)
+    date_of_birth     = models.DateField(blank=True, null=True)
+    date_of_expiry    = models.DateField(blank=True, null=True)
+    sex               = models.CharField(max_length=1, blank=True, null=True)
+    father_name       = models.CharField(max_length=255, blank=True, null=True)
+    mother_name       = models.CharField(max_length=255, blank=True, null=True)
+    place_of_birth    = models.CharField(max_length=255, blank=True, null=True)
+    occupation        = models.CharField(max_length=255, blank=True, null=True)
+    height            = models.CharField(max_length=10, blank=True, null=True)
+    mrz_line1         = models.CharField(max_length=255, blank=True, null=True)
+    mrz_line2         = models.CharField(max_length=255, blank=True, null=True)
+    mrz_line3         = models.CharField(max_length=255, blank=True, null=True)
+
+    # Biometric
+    fingerprint_hash  = models.CharField(max_length=255, blank=True, null=True)
+    credential_id     = models.TextField(blank=True, null=True)
 
     class Meta:
         db_table = 'document_details'
@@ -146,7 +172,14 @@ class DocumentDetail(models.Model):
         return f"{self.document_type} - {self.owner_name}"
 
     def get_hash_fields(self):
-        return f"{self.document_type}{self.owner_name}{self.issuing_authority}{self.reference_number}{self.location}{self.issue_date}"
+        base = f"{self.document_type}{self.owner_name}{self.issuing_authority}{self.reference_number}{self.location}{self.issue_date}"
+        if self.card_number:
+            base += self.card_number
+        if self.date_of_birth:
+            base += str(self.date_of_birth)
+        if self.fingerprint_hash:
+            base += self.fingerprint_hash
+        return base
 
 
 class BanknoteDetail(models.Model):
@@ -161,12 +194,12 @@ class BanknoteDetail(models.Model):
         on_delete=models.CASCADE,
         related_name='banknote_detail'
     )
-    currency = models.CharField(max_length=10)
-    denomination = models.DecimalField(max_digits=15, decimal_places=2)
+    currency      = models.CharField(max_length=10)
+    denomination  = models.DecimalField(max_digits=15, decimal_places=2)
     serial_number = models.CharField(max_length=100)
-    series = models.CharField(max_length=100)
-    issue_date = models.DateField()
-    issuing_bank = models.CharField(max_length=255)
+    series        = models.CharField(max_length=100)
+    issue_date    = models.DateField()
+    issuing_bank  = models.CharField(max_length=255)
 
     class Meta:
         db_table = 'banknote_details'

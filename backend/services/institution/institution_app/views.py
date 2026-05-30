@@ -293,18 +293,20 @@ def revoke_institution(request, institution_id):
         status=status.HTTP_200_OK
     )
 
-
 @api_view(['GET'])
 @permission_classes([AllowAny])
 def institution_detail(request, institution_id):
     """
     Get full details of one institution.
     GET /api/institution/{id}/
-    Admin JWT required.
+    Admin JWT required — or internal service call without token.
     """
-    user, error = require_role(request, 'ADMIN')
-    if error:
-        return Response(error, status=status.HTTP_403_FORBIDDEN)
+    token = request.META.get('HTTP_AUTHORIZATION', '')
+
+    if token:
+        user, error = require_role(request, 'ADMIN')
+        if error:
+            return Response(error, status=status.HTTP_403_FORBIDDEN)
 
     try:
         institution = Institution.objects.get(id=institution_id)

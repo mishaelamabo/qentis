@@ -37,12 +37,10 @@ INSTITUTION_CATEGORY_MAP = {
 
 
 def generate_hash(field_values):
-    """Generate SHA-256 hash from concatenated field values."""
     return hashlib.sha256(field_values.encode()).hexdigest()
 
 
 def get_blockchain_category(category):
-    """Map item registration categories to blockchain categories."""
     mapping = {
         'CERTIFICATE':    'ACADEMIC',
         'PHARMACEUTICAL': 'PHARMA',
@@ -53,10 +51,6 @@ def get_blockchain_category(category):
 
 
 def get_allowed_category(institution_id):
-    """
-    Get allowed item category for an institution
-    by calling the Institution Service.
-    """
     try:
         response = requests.get(
             f"{settings.INSTITUTION_SERVICE_URL}/api/institution/{institution_id}/",
@@ -157,13 +151,29 @@ def create_detail(item, category, data):
         )
     elif category == Item.Category.DOCUMENT:
         return DocumentDetail.objects.create(
-            item=item,
-            document_type=data['document_type'],
-            owner_name=data['owner_name'],
-            issuing_authority=data['issuing_authority'],
-            reference_number=data['reference_number'],
-            location=data['location'],
-            issue_date=data['issue_date'],
+           item=item,
+           document_type=data['document_type'],
+           owner_name=data['owner_name'],
+           issuing_authority=data['issuing_authority'],
+           reference_number=data['reference_number'],
+           card_number=data.get('card_number', ''),
+           location=data['location'],
+           issue_date=data['issue_date'],
+           fingerprint_hash=data.get('fingerprint_hash', ''),
+           credential_id=data.get('credential_id', ''),
+           owner_surname=data.get('owner_surname', ''),
+           owner_given_names=data.get('owner_given_names', ''),
+           date_of_birth=data.get('date_of_birth'),
+           date_of_expiry=data.get('date_of_expiry'),
+           sex=data.get('sex', ''),
+           father_name=data.get('father_name', ''),
+           mother_name=data.get('mother_name', ''),
+           place_of_birth=data.get('place_of_birth', ''),
+           occupation=data.get('occupation', ''),
+           height=data.get('height', ''),
+           mrz_line1=data.get('mrz_line1', ''),
+           mrz_line2=data.get('mrz_line2', ''),
+           mrz_line3=data.get('mrz_line3', ''),
         )
     elif category == Item.Category.BANKNOTE:
         return BanknoteDetail.objects.create(
@@ -180,16 +190,11 @@ def create_detail(item, category, data):
 @swagger_auto_schema(
     method='post',
     request_body=RegisterItemSerializer,
-    responses={201: 'Item registered successfully'}
+    responses={201: 'Item submitted for approval'}
 )
 @api_view(['POST'])
 @permission_classes([AllowAny])
 def register_item(request):
-    """
-    Issuer registers a new item for authentication.
-    POST /api/items/register/
-    JWT required — must be ISSUER role.
-    """
     user, error = require_role(request, 'ISSUER')
     if error:
         return Response(error, status=status.HTTP_401_UNAUTHORIZED)
@@ -198,75 +203,166 @@ def register_item(request):
 
     serializer = RegisterItemSerializer(data=request.data)
     if not serializer.is_valid():
-        return Response(
-            serializer.errors,
-            status=status.HTTP_400_BAD_REQUEST
-        )
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     data = serializer.validated_data
     category = data['category']
 
-    # ── Validate category matches institution type ──
     institution_id_str = request.data.get('institution_id')
     if institution_id_str:
         allowed_category = get_allowed_category(institution_id_str)
         if allowed_category and category != allowed_category:
             return Response(
-                {
-                    'error': f'Your institution can only register '
-                             f'{allowed_category} items, not {category}.'
-                },
+                {'error': f'Your institution can only register {allowed_category} items, not {category}.'},
                 status=status.HTTP_400_BAD_REQUEST
             )
 
     item = Item.objects.create(
         issuer_id=uuid.UUID(issuer_id),
-        institution_id=uuid.UUID(
-            institution_id_str or str(uuid.uuid4())
-        ),
+        institution_id=uuid.UUID(institution_id_str or str(uuid.uuid4())),
         category=category,
-        status=Item.Status.REGISTERED,
+        status=Item.Status.PENDING,
     )
 
-    detail = create_detail(item, category, data)
-    hash_fields = detail.get_hash_fields()
-
-    blockchain_response = call_blockchain_service(
-        item.id, category, hash_fields,
-        issuer_id=issuer_id,
-        issuer_name=request.data.get('institution_name', 'Unknown Institution')
-    )
-
-    output_response = call_output_service(
-        item.id, category,
-        blockchain_response.get('hash'),
-        issuer_id
-    )
-
-    item.blockchain_hash = blockchain_response.get('hash')
-    item.transaction_hash = blockchain_response.get('transaction_hash')
-    item.qr_code_url = output_response.get('qr_code_url')
-    item.serial_number = output_response.get('serial_number')
-    item.save()
+    create_detail(item, category, data)
 
     serializer = ItemSerializer(item)
     return Response(
         {
-            'message': 'Item registered successfully.',
+            'message': 'Item submitted for approval. An admin will review it shortly.',
             'item': serializer.data,
         },
         status=status.HTTP_201_CREATED
     )
 
 
+@api_view(['PUT'])
+@permission_classes([AllowAny])
+def approve_item(request, item_id):
+    user, error = require_role(request, 'ADMIN')
+    if error:
+        return Response(error, status=status.HTTP_403_FORBIDDEN)
+
+    admin_id = user.get('user_id')
+
+    try:
+        item = Item.objects.get(id=item_id)
+    except Item.DoesNotExist:
+        return Response({'error': 'Item not found.'}, status=status.HTTP_404_NOT_FOUND)
+
+    if item.status != Item.Status.PENDING:
+        return Response(
+            {'error': f'Item is {item.status}, not PENDING.'},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+
+    detail = (
+        item.certificate_detail if hasattr(item, 'certificate_detail') else
+        item.pharmaceutical_detail if hasattr(item, 'pharmaceutical_detail') else
+        item.document_detail if hasattr(item, 'document_detail') else
+        item.banknote_detail if hasattr(item, 'banknote_detail') else None
+    )
+
+    if not detail:
+        return Response({'error': 'Item detail not found.'}, status=status.HTTP_400_BAD_REQUEST)
+
+    hash_fields = detail.get_hash_fields()
+
+    # ── Look up institution name ──
+    institution_name = 'Unknown Institution'
+    try:
+        inst_response = requests.get(
+            f"{settings.INSTITUTION_SERVICE_URL}/api/institution/{item.institution_id}/",
+            timeout=5
+        )
+        if inst_response.status_code == 200:
+            institution_name = inst_response.json().get('name', 'Unknown Institution')
+    except Exception:
+        pass
+
+    blockchain_response = call_blockchain_service(
+        item.id, item.category, hash_fields,
+        issuer_id=str(item.issuer_id),
+        issuer_name=institution_name
+    )
+
+    output_response = call_output_service(
+        item.id, item.category,
+        blockchain_response.get('hash'),
+        str(item.issuer_id)
+    )
+
+    item.status           = Item.Status.REGISTERED
+    item.blockchain_hash  = blockchain_response.get('hash')
+    item.transaction_hash = blockchain_response.get('transaction_hash')
+    item.qr_code_url      = output_response.get('qr_code_url')
+    item.serial_number    = output_response.get('serial_number')
+    item.approved_at      = timezone.now()
+    item.approved_by      = uuid.UUID(admin_id)
+    item.save()
+
+    serializer = ItemSerializer(item)
+    return Response(
+        {
+            'message': 'Item approved and registered on blockchain.',
+            'item': serializer.data,
+        },
+        status=status.HTTP_200_OK
+    )
+
+
+@api_view(['PUT'])
+@permission_classes([AllowAny])
+def reject_item(request, item_id):
+    user, error = require_role(request, 'ADMIN')
+    if error:
+        return Response(error, status=status.HTTP_403_FORBIDDEN)
+
+    try:
+        item = Item.objects.get(id=item_id)
+    except Item.DoesNotExist:
+        return Response({'error': 'Item not found.'}, status=status.HTTP_404_NOT_FOUND)
+
+    if item.status != Item.Status.PENDING:
+        return Response(
+            {'error': f'Item is {item.status}, not PENDING.'},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+
+    reason = request.data.get('reason', '')
+    if not reason:
+        return Response({'error': 'Rejection reason is required.'}, status=status.HTTP_400_BAD_REQUEST)
+
+    item.status        = Item.Status.REJECTED
+    item.rejected_at   = timezone.now()
+    item.reject_reason = reason
+    item.save()
+
+    serializer = ItemSerializer(item)
+    return Response(
+        {
+            'message': 'Item rejected.',
+            'item': serializer.data,
+        },
+        status=status.HTTP_200_OK
+    )
+
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def pending_items(request):
+    user, error = require_role(request, 'ADMIN')
+    if error:
+        return Response(error, status=status.HTTP_403_FORBIDDEN)
+
+    items = Item.objects.filter(status=Item.Status.PENDING)
+    serializer = ItemSerializer(items, many=True)
+    return Response(serializer.data, status=status.HTTP_200_OK)
+
+
 @api_view(['GET'])
 @permission_classes([AllowAny])
 def my_items(request):
-    """
-    Issuer views all their registered items.
-    GET /api/items/my-items/
-    JWT required.
-    """
     user, error = require_auth(request)
     if error:
         return Response(error, status=status.HTTP_401_UNAUTHORIZED)
@@ -280,11 +376,6 @@ def my_items(request):
 @api_view(['GET'])
 @permission_classes([AllowAny])
 def item_detail(request, item_id):
-    """
-    Get full details of one item.
-    GET /api/items/{item_id}/
-    JWT optional — internal service calls work without token.
-    """
     token = request.META.get('HTTP_AUTHORIZATION', '')
 
     if token:
@@ -299,18 +390,12 @@ def item_detail(request, item_id):
             else:
                 item = Item.objects.get(id=item_id, issuer_id=issuer_id)
         except Item.DoesNotExist:
-            return Response(
-                {'error': 'Item not found.'},
-                status=status.HTTP_404_NOT_FOUND
-            )
+            return Response({'error': 'Item not found.'}, status=status.HTTP_404_NOT_FOUND)
     else:
         try:
             item = Item.objects.get(id=item_id)
         except Item.DoesNotExist:
-            return Response(
-                {'error': 'Item not found.'},
-                status=status.HTTP_404_NOT_FOUND
-            )
+            return Response({'error': 'Item not found.'}, status=status.HTTP_404_NOT_FOUND)
 
     serializer = ItemSerializer(item)
     return Response(serializer.data, status=status.HTTP_200_OK)
@@ -324,11 +409,6 @@ def item_detail(request, item_id):
 @api_view(['PUT'])
 @permission_classes([AllowAny])
 def revoke_item(request, item_id):
-    """
-    Issuer revokes a registered item.
-    PUT /api/items/{item_id}/revoke/
-    JWT required.
-    """
     user, error = require_role(request, 'ISSUER')
     if error:
         return Response(error, status=status.HTTP_401_UNAUTHORIZED)
@@ -338,26 +418,20 @@ def revoke_item(request, item_id):
     try:
         item = Item.objects.get(id=item_id, issuer_id=issuer_id)
     except Item.DoesNotExist:
-        return Response(
-            {'error': 'Item not found.'},
-            status=status.HTTP_404_NOT_FOUND
-        )
+        return Response({'error': 'Item not found.'}, status=status.HTTP_404_NOT_FOUND)
 
-    if item.status == Item.Status.REVOKED:
+    if item.status != Item.Status.REGISTERED:
         return Response(
-            {'error': 'Item is already revoked.'},
+            {'error': 'Only registered items can be revoked.'},
             status=status.HTTP_400_BAD_REQUEST
         )
 
     serializer = RevokeItemSerializer(data=request.data)
     if not serializer.is_valid():
-        return Response(
-            serializer.errors,
-            status=status.HTTP_400_BAD_REQUEST
-        )
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-    item.status = Item.Status.REVOKED
-    item.revoked_at = timezone.now()
+    item.status        = Item.Status.REVOKED
+    item.revoked_at    = timezone.now()
     item.revoke_reason = serializer.validated_data['reason']
     item.save()
 
@@ -365,7 +439,7 @@ def revoke_item(request, item_id):
         {
             'message': 'Item revoked successfully.',
             'item_id': str(item.id),
-            'status': item.status,
+            'status':  item.status,
             'revoked_at': item.revoked_at,
         },
         status=status.HTTP_200_OK
@@ -375,20 +449,14 @@ def revoke_item(request, item_id):
 @api_view(['GET'])
 @permission_classes([AllowAny])
 def all_items(request):
-    """
-    Admin views all registered items.
-    GET /api/items/all/
-    Admin JWT required.
-    """
     user, error = require_role(request, 'ADMIN')
     if error:
         return Response(error, status=status.HTTP_403_FORBIDDEN)
 
-    category = request.query_params.get('category')
+    category      = request.query_params.get('category')
     status_filter = request.query_params.get('status')
 
     items = Item.objects.all()
-
     if category:
         items = items.filter(category=category)
     if status_filter:
@@ -401,19 +469,30 @@ def all_items(request):
 @api_view(['GET'])
 @permission_classes([AllowAny])
 def item_by_serial(request, serial_number):
-    """
-    Get item details by serial number.
-    GET /api/items/serial/{serial_number}/
-    Called by Verification Service for serial/QR verification.
-    No authentication required.
-    """
     try:
         item = Item.objects.get(serial_number=serial_number)
     except Item.DoesNotExist:
-        return Response(
-            {'error': 'Item not found.'},
-            status=status.HTTP_404_NOT_FOUND
+        return Response({'error': 'Item not found.'}, status=status.HTTP_404_NOT_FOUND)
+
+    serializer = ItemSerializer(item)
+    return Response(serializer.data, status=status.HTTP_200_OK)
+    
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def item_by_reference(request, reference_number):
+    """
+    Get DOCUMENT item by reference number (Identifiant Unique).
+    GET /api/items/reference/{reference_number}/
+    No authentication required — used by verification service.
+    """
+    try:
+        item = Item.objects.get(
+            document_detail__reference_number=reference_number,
+            category=Item.Category.DOCUMENT,
+            status=Item.Status.REGISTERED,
         )
+    except Item.DoesNotExist:
+        return Response({'error': 'Document not found.'}, status=status.HTTP_404_NOT_FOUND)
 
     serializer = ItemSerializer(item)
     return Response(serializer.data, status=status.HTTP_200_OK)

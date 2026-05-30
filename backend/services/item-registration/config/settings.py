@@ -84,6 +84,7 @@ SIMPLE_JWT = {
 AUTH_SERVICE_URL = os.getenv('AUTH_SERVICE_URL', 'http://user-auth:8001')
 BLOCKCHAIN_SERVICE_URL = os.getenv('BLOCKCHAIN_SERVICE_URL', 'http://blockchain:8004')
 OUTPUT_SERVICE_URL = os.getenv('OUTPUT_SERVICE_URL', 'http://auth-output:8005')
+INSTITUTION_SERVICE_URL = os.environ.get('INSTITUTION_SERVICE_URL', 'http://institution:8002')
 
 LANGUAGE_CODE = 'en-us'
 TIME_ZONE = 'UTC'

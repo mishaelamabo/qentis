@@ -2,13 +2,14 @@ from django.urls import path
 from . import views
 
 urlpatterns = [
-    path('hash/', views.verify_hash, name='verify-hash'),
-    path('qr/', views.verify_qr, name='verify-qr'),
-    path('serial/', views.verify_serial, name='verify-serial'),
-    path('signature/', views.verify_signature, name='verify-signature'),
-    path('ocr/', views.verify_ocr, name='verify-ocr'),
-    path('watermark/', views.verify_watermark, name='verify-watermark'),
-    path('report/', views.report_item, name='verify-report'),
-    path('history/<uuid:item_id>/', views.verification_history, name='verify-history'),
-    path('flags/', views.fraud_flags, name='verify-flags'),
+    path('hash/',                    views.verify_hash,            name='verify-hash'),
+    path('qr/',                      views.verify_qr,              name='verify-qr'),
+    path('serial/',                  views.verify_serial,          name='verify-serial'),
+    path('signature/',               views.verify_signature,       name='verify-signature'),
+    path('ocr/',                     views.verify_ocr,             name='verify-ocr'),
+    path('watermark/',               views.verify_watermark,       name='verify-watermark'),
+    path('document/',                views.verify_document,        name='verify-document'),
+    path('report/',                  views.report_item,            name='verify-report'),
+    path('history/<uuid:item_id>/',  views.verification_history,   name='verify-history'),
+    path('flags/',                   views.fraud_flags,            name='verify-flags'),
 ]
