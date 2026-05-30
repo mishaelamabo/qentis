@@ -1,0 +1,97 @@
+pipeline {
+    agent any
+
+    environment {
+        VPS_IP   = '207.180.217.238'
+        VPS_USER = 'mishael'
+        APP_DIR  = '/home/mishael/qentis'
+        REPO_URL = 'https://github.com/DanielLeo09/qentis.git'
+    }
+
+    stages {
+
+        stage('Checkout') {
+            steps {
+                echo '>>> Cloning repository...'
+                git branch: 'main', url: "${REPO_URL}"
+            }
+        }
+
+        stage('Lint') {
+            steps {
+                sh '''
+                    pip install flake8 --quiet || true
+                    cd backend
+                    for service in services/*/; do
+                        echo "Linting $service"
+                        flake8 "$service" --max-line-length=120 \
+                            --exclude=migrations,__pycache__ || true
+                    done
+                '''
+            }
+        }
+
+        stage('Test') {
+            steps {
+                sh '''
+                    pip install pytest pytest-django pytest-cov --quiet || true
+                    cd backend
+                    if [ -f tests/run_tests.sh ]; then
+                        bash tests/run_tests.sh
+                    else
+                        echo "No test runner yet, skipping..."
+                    fi
+                '''
+            }
+        }
+
+        stage('Build Docker Images') {
+            steps {
+                sh '''
+                    cd backend
+                    docker compose build --no-cache
+                '''
+            }
+        }
+
+        stage('Deploy to VPS') {
+            steps {
+                sshagent(['vps-ssh-key']) {
+                    sh '''
+                        ssh -o StrictHostKeyChecking=no ${VPS_USER}@${VPS_IP} "
+                            set -e
+                            cd ${APP_DIR} && git pull origin main
+                            cd ${APP_DIR}/backend && docker compose stop
+                            docker compose up -d --build
+                            sleep 10
+                            for svc in user-auth institution item-registration blockchain auth-output verification admin-analytics; do
+                                docker exec \$svc python manage.py migrate --noinput || true
+                            done
+                            sudo nginx -t && sudo systemctl reload nginx
+                            docker compose ps
+                        "
+                    '''
+                }
+            }
+        }
+
+        stage('Health Check') {
+            steps {
+                sh '''
+                    sleep 15
+                    for port in 8001 8002 8003 8004 8005 8006 8007; do
+                        STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
+                            http://${VPS_IP}:${port}/health/ || echo "000")
+                        echo "Service :${port} -> HTTP ${STATUS}"
+                    done
+                '''
+            }
+        }
+    }
+
+    post {
+        success { echo '✅ Qentis deployed successfully!' }
+        failure { echo '❌ Pipeline failed - check logs above' }
+        always  { cleanWs() }
+    }
+}

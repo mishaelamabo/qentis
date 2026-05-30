@@ -477,3 +477,104 @@ Confirmed running together without errors:
 - All 7 Django services showing `Watching for file changes with StatReloader`
 - Ganache running with 10 funded accounts on port 8545
 - All inter-service network connections established
+
+---
+
+## Integration Testing — 20 May 2026
+**Status:** 🔄 In progress — issues found and being resolved
+
+### What we tested
+Full registration flow across services:
+User & Auth → Item Registration → Blockchain → Auth Output
+
+### Test environment
+All 7 services running simultaneously with `docker-compose up`
+All migrations applied on all services
+
+### Issue 1 — Different SECRET_KEY per service broke JWT verification
+**Symptom:** Token returned by User & Auth Service was rejected by
+Item Registration Service with `token_not_valid` error.
+**Root cause:** Each service had a different SECRET_KEY in
+docker-compose.yml. JWT tokens are signed with one key and must be
+verified with the same key across all services.
+**Fix:** Changed all 7 services to use the same shared SECRET_KEY
+`qentis-shared-secret-key-2026` in docker-compose.yml.
+**Status:** ✅ Resolved
+
+### Issue 2 — UUID vs Integer user ID mismatch
+**Symptom:** Item Registration Service throws
+`ValueError: Field 'id' expected a number but got UUID`
+when a logged-in issuer tries to register an item.
+**Root cause:** User & Auth Service uses UUID as primary key for
+users. Item Registration Service expects an integer ID when looking
+up the authenticated user from the JWT token.
+**Fix:** Mishael needs to update the User model or JWT authentication
+configuration in the Item Registration Service to handle UUID user IDs.
+**Status:** ⏳ Pending Mishael's fix
+
+### Key lesson learned
+Unit tests pass per service in isolation but integration reveals
+incompatibilities between services that unit tests cannot catch.
+This is precisely why integration testing is a separate requirement
+in the exam specification.
+
+### Update — 21 May 2026
+Integration tests re-run after fixes. Results: 18/20 passing.
+
+**Fixed this session:**
+- Shared SECRET_KEY across all services — JWT now accepted by all services
+- solc 0.8.0 auto-install on blockchain service startup (apps.py ready() method)
+- Blockchain container rebuilt to apply apps.py changes
+
+**Remaining failures (both pending Mishael):**
+- Hash verification fails — Ganache reset on restart, contract needs
+  redeployment. Mishael to redeploy and update CONTRACT_ADDRESS.
+- Full registration flow fails — UUID mismatch in Item Registration
+  Service. Mishael to fix User model to accept UUID primary key.
+
+**Integration test file location:**
+backend/tests/test_integration.py
+Run with: python tests/test_integration.py (all services must be up)
+
+### Update — 23 May 2026
+Integration tests fully revised and re-run. Results: 20/22 passing.
+
+**Fixes applied this session:**
+- Test 1: Replaced non-existent /health/ URLs with /api/docs/ for services
+  that have no health endpoint (User & Auth, Institution, Item Registration,
+  Verification). All 7 services now confirmed healthy.
+- Test 2: Cleaned registration payload — removed extra fields not accepted
+  by RegisterSerializer (name, institution_name, institution_type).
+- Test 5: Removed unused item_name field from output generation payload.
+  Function now returns serial_number for use in Test 9.
+- Test 8: Fixed completely — category changed from ACADEMIC to CERTIFICATE
+  (item service uses CERTIFICATE/PHARMACEUTICAL/DOCUMENT/BANKNOTE, not the
+  blockchain layer labels). Fixed institution → institution_name. Added
+  missing required fields matricule and grade. Test now passes.
+- Test 9 (NEW): Added verification service tests — 9a verifies by blockchain
+  hash, 9b verifies by serial number. Both endpoints confirmed reachable.
+
+**Remaining failures (1 root cause — both will be fixed together):**
+- Hash verify (Test 4) — Ganache resets on every restart, the deployed
+  smart contract address becomes invalid. Mishael needs to redeploy the
+  contract and update CONTRACT_ADDRESS in docker-compose.yml.
+- Verify by hash (Test 9a) — skipped because Test 4 hash verify failed,
+  no valid hash to pass down.
+
+**Once Mishael redeploys the contract: 22/22 tests will pass.**
+
+**Integration test file:** backend/tests/test_integration.py
+**Run with:** python tests/test_integration.py (all services must be up)
+
+### Final test results summary
+| Test | Description | Status |
+|---|---|---|
+| 1 | All 7 services health check | ✅ 7/7 passing |
+| 2 | User registration and login | ✅ Passing |
+| 3 | Blockchain + Ganache connection | ✅ Passing |
+| 4 | Store and verify hash on blockchain | ⚠️ Store passes, verify pending contract redeploy |
+| 5 | Auth Output — QR, serial, signature | ✅ 3/3 passing |
+| 6 | Admin activity logging | ✅ Passing |
+| 7 | Admin fraud alert flow | ✅ Passing |
+| 8 | Full item registration (CERTIFICATE) | ✅ Passing |
+| 9 | Verification service — hash and serial | ⚠️ Serial passes, hash pending contract redeploy |

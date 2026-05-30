@@ -1,0 +1,67 @@
+replicaCount: 1
+
+image:
+  pullPolicy: IfNotPresent
+
+global:
+  secretKey: "qentis-secret-key-2026"
+  debug: "False"
+  allowedHosts: "*"
+
+services:
+  userAuth:
+    name: user-auth
+    port: 8001
+    image: qentis/user-auth:latest
+  institution:
+    name: institution
+    port: 8002
+    image: qentis/institution:latest
+  itemRegistration:
+    name: item-registration
+    port: 8003
+    image: qentis/item-registration:latest
+  blockchain:
+    name: blockchain
+    port: 8004
+    image: qentis/blockchain:latest
+  authOutput:
+    name: auth-output
+    port: 8005
+    image: qentis/auth-output:latest
+  verification:
+    name: verification
+    port: 8006
+    image: qentis/verification:latest
+  adminAnalytics:
+    name: admin-analytics
+    port: 8007
+    image: qentis/admin-analytics:latest
+
+postgres:
+  host: postgres
+  port: 5432
+  user: qentis
+  password: qentis2026
+  db: qentis_main
+
+redis:
+  url: redis://redis:6379/0
+
+ganache:
+  url: http://ganache:8545
+  contractAddress: "0x981A5F96Bc8C9C633F40D2a4242BdD6CCb390C64"
+  deployerPrivateKey: "0xd980fc1392d2fddce18279a75775416c9f4f6070bddd38d2d1f496e34193c05f"
+
+ingress:
+  enabled: true
+  className: nginx
+  host: "207.180.217.238"
+
+resources:
+  limits:
+    cpu: 500m
+    memory: 512Mi
+  requests:
+    cpu: 100m
+    memory: 256Mi

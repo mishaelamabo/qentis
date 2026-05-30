@@ -1,0 +1,68 @@
+{{- range $key, $svc := .Values.services }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ $svc.name }}
+  labels:
+    app: {{ $svc.name }}
+spec:
+  replicas: {{ $.Values.replicaCount }}
+  selector:
+    matchLabels:
+      app: {{ $svc.name }}
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  template:
+    metadata:
+      labels:
+        app: {{ $svc.name }}
+    spec:
+      containers:
+        - name: {{ $svc.name }}
+          image: {{ $svc.image }}
+          imagePullPolicy: {{ $.Values.image.pullPolicy }}
+          ports:
+            - containerPort: {{ $svc.port }}
+          env:
+            - name: SECRET_KEY
+              value: {{ $.Values.global.secretKey | quote }}
+            - name: DEBUG
+              value: {{ $.Values.global.debug | quote }}
+            - name: ALLOWED_HOSTS
+              value: {{ $.Values.global.allowedHosts | quote }}
+            - name: DB_HOST
+              value: {{ $.Values.postgres.host | quote }}
+            - name: POSTGRES_USER
+              value: {{ $.Values.postgres.user | quote }}
+            - name: POSTGRES_PASSWORD
+              value: {{ $.Values.postgres.password | quote }}
+            - name: POSTGRES_DB
+              value: {{ $.Values.postgres.db | quote }}
+            - name: REDIS_URL
+              value: {{ $.Values.redis.url | quote }}
+            - name: GANACHE_URL
+              value: {{ $.Values.ganache.url | quote }}
+            - name: CONTRACT_ADDRESS
+              value: {{ $.Values.ganache.contractAddress | quote }}
+            - name: AUTH_SERVICE_URL
+              value: "http://user-auth:8001"
+            - name: INSTITUTION_SERVICE_URL
+              value: "http://institution:8002"
+            - name: BLOCKCHAIN_SERVICE_URL
+              value: "http://blockchain:8004"
+            - name: OUTPUT_SERVICE_URL
+              value: "http://auth-output:8005"
+            - name: ITEM_SERVICE_URL
+              value: "http://item-registration:8003"
+          resources:
+            limits:
+              cpu: {{ $.Values.resources.limits.cpu }}
+              memory: {{ $.Values.resources.limits.memory }}
+            requests:
+              cpu: {{ $.Values.resources.requests.cpu }}
+              memory: {{ $.Values.resources.requests.memory }}
+{{- end }}

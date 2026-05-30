@@ -1,0 +1,61 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: qentis-ingress
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /
+spec:
+  ingressClassName: nginx
+  rules:
+    - host: "207.180.217.238"
+      http:
+        paths:
+          - path: /api/auth/
+            pathType: Prefix
+            backend:
+              service:
+                name: user-auth
+                port:
+                  number: 8001
+          - path: /api/institution/
+            pathType: Prefix
+            backend:
+              service:
+                name: institution
+                port:
+                  number: 8002
+          - path: /api/items/
+            pathType: Prefix
+            backend:
+              service:
+                name: item-registration
+                port:
+                  number: 8003
+          - path: /api/blockchain/
+            pathType: Prefix
+            backend:
+              service:
+                name: blockchain
+                port:
+                  number: 8004
+          - path: /api/output/
+            pathType: Prefix
+            backend:
+              service:
+                name: auth-output
+                port:
+                  number: 8005
+          - path: /api/verify/
+            pathType: Prefix
+            backend:
+              service:
+                name: verification
+                port:
+                  number: 8006
+          - path: /api/admin/
+            pathType: Prefix
+            backend:
+              service:
+                name: admin-analytics
+                port:
+                  number: 8007

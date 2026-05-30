@@ -1,0 +1,47 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+scrape_configs:
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+
+  - job_name: 'node-exporter'
+    static_configs:
+      - targets: ['node-exporter:9100']
+
+  - job_name: 'user-auth'
+    static_configs:
+      - targets: ['user-auth:8001']
+    metrics_path: '/metrics/'
+
+  - job_name: 'institution'
+    static_configs:
+      - targets: ['institution:8002']
+    metrics_path: '/metrics/'
+
+  - job_name: 'item-registration'
+    static_configs:
+      - targets: ['item-registration:8003']
+    metrics_path: '/metrics/'
+
+  - job_name: 'blockchain'
+    static_configs:
+      - targets: ['blockchain:8004']
+    metrics_path: '/metrics/'
+
+  - job_name: 'auth-output'
+    static_configs:
+      - targets: ['auth-output:8005']
+    metrics_path: '/metrics/'
+
+  - job_name: 'verification'
+    static_configs:
+      - targets: ['verification:8006']
+    metrics_path: '/metrics/'
+
+  - job_name: 'admin-analytics'
+    static_configs:
+      - targets: ['admin-analytics:8007']
+    metrics_path: '/metrics/'

@@ -1,0 +1,96 @@
+---
+- name: Deploy Qentis application
+  hosts: qentis_vps
+  become: yes
+  vars:
+    app_dir: /home/mishael/qentis
+    repo_url: https://github.com/DanielLeo09/qentis.git
+
+  tasks:
+    - name: Allow SSH
+      ufw:
+        rule: allow
+        port: "22"
+
+    - name: Allow HTTP
+      ufw:
+        rule: allow
+        port: "80"
+
+    - name: Allow HTTPS
+      ufw:
+        rule: allow
+        port: "443"
+
+    - name: Allow microservice ports
+      ufw:
+        rule: allow
+        port: "{{ item }}"
+      loop: ["8001","8002","8003","8004","8005","8006","8007"]
+
+    - name: Allow monitoring ports
+      ufw:
+        rule: allow
+        port: "{{ item }}"
+      loop: ["3000","8080","9090","9100"]
+
+    - name: Enable UFW
+      ufw:
+        state: enabled
+        policy: deny
+        direction: incoming
+
+    - name: Clone or update repository
+      git:
+        repo: "{{ repo_url }}"
+        dest: "{{ app_dir }}"
+        version: main
+        force: yes
+      become_user: mishael
+
+    - name: Generate self-signed SSL certificate
+      command: >
+        openssl req -x509 -nodes -days 365 -newkey rsa:2048
+        -keyout /etc/ssl/private/qentis.key
+        -out /etc/ssl/certs/qentis.crt
+        -subj "/C=CM/ST=Centre/L=Yaounde/O=ICTUniversity/CN=207.180.217.238"
+      args:
+        creates: /etc/ssl/certs/qentis.crt
+
+    - name: Copy Nginx config
+      copy:
+        src: ../nginx/qentis.conf
+        dest: /etc/nginx/sites-available/qentis
+        mode: '0644'
+
+    - name: Enable Nginx site
+      file:
+        src: /etc/nginx/sites-available/qentis
+        dest: /etc/nginx/sites-enabled/qentis
+        state: link
+
+    - name: Remove default Nginx site
+      file:
+        path: /etc/nginx/sites-enabled/default
+        state: absent
+
+    - name: Reload Nginx
+      systemd:
+        name: nginx
+        state: reloaded
+
+    - name: Start Docker services
+      shell: cd {{ app_dir }}/backend && docker compose up -d --build
+      become_user: mishael
+
+    - name: Run migrations
+      shell: docker exec {{ item }} python manage.py migrate --noinput
+      loop:
+        - user-auth
+        - institution
+        - item-registration
+        - blockchain
+        - auth-output
+        - verification
+        - admin-analytics
+      ignore_errors: yes
