@@ -122,43 +122,133 @@
         </div>
       </div>
 
-      <!-- DOCUMENT fields -->
+      <!-- DOCUMENT fields — New CNI Format -->
       <div id="fields-DOCUMENT" class="category-fields" style="display:none;">
         <div class="q-form-row">
           <div class="q-form-group">
             <label class="q-label">Document type *</label>
             <select id="document_type" class="q-select">
               <option value="">Select type...</option>
-              <option value="NATIONAL_ID">National ID</option>
+              <option value="NATIONAL_ID">National ID (New Format)</option>
+              <option value="NATIONAL_ID_OLD">National ID (Old Format)</option>
               <option value="PASSPORT">Passport</option>
               <option value="BIRTH_CERTIFICATE">Birth Certificate</option>
               <option value="LEGAL_DOCUMENT">Legal Document</option>
             </select>
           </div>
           <div class="q-form-group">
-            <label class="q-label">Owner name *</label>
-            <input type="text" id="owner_name" class="q-input" placeholder="John Doe"/>
+            <label class="q-label">NIC Number * <span style="font-size:11px;color:var(--q-text-muted)">(e.g. AA17315841)</span></label>
+            <input type="text" id="reference_number" class="q-input" placeholder="AA17315841"/>
           </div>
         </div>
         <div class="q-form-row">
           <div class="q-form-group">
-            <label class="q-label">Issuing authority *</label>
-            <input type="text" id="issuing_authority" class="q-input" placeholder="Ministry of Interior"/>
+            <label class="q-label">Card Number * <span style="font-size:11px;color:var(--q-text-muted)">(e.g. 101001459)</span></label>
+            <input type="text" id="card_number" class="q-input" placeholder="101001459"/>
           </div>
           <div class="q-form-group">
-            <label class="q-label">Reference number *</label>
-            <input type="text" id="reference_number" class="q-input" placeholder="REF-2026-001"/>
+            <label class="q-label">Surname *</label>
+            <input type="text" id="owner_surname" class="q-input" placeholder="MBETGA YOMBA"/>
           </div>
         </div>
         <div class="q-form-row">
           <div class="q-form-group">
-            <label class="q-label">Location *</label>
-            <input type="text" id="location" class="q-input" placeholder="Yaounde, Cameroon"/>
+            <label class="q-label">Given names *</label>
+            <input type="text" id="owner_given_names" class="q-input" placeholder="DANIEL LEO"/>
+          </div>
+          <div class="q-form-group">
+            <label class="q-label">Sex *</label>
+            <select id="sex" class="q-select">
+              <option value="">Select...</option>
+              <option value="M">Male</option>
+              <option value="F">Female</option>
+            </select>
+          </div>
+        </div>
+        <div class="q-form-row">
+          <div class="q-form-group">
+            <label class="q-label">Date of birth *</label>
+            <input type="date" id="date_of_birth" class="q-input"/>
+          </div>
+          <div class="q-form-group">
+            <label class="q-label">Date of expiry *</label>
+            <input type="date" id="date_of_expiry" class="q-input"/>
+          </div>
+        </div>
+        <div class="q-form-row">
+          <div class="q-form-group">
+            <label class="q-label">Father's name *</label>
+            <input type="text" id="father_name" class="q-input" placeholder="YOMBA DANIEL"/>
+          </div>
+          <div class="q-form-group">
+            <label class="q-label">Mother's name *</label>
+            <input type="text" id="mother_name" class="q-input" placeholder="MAFOBOUE KOLLA MELANIE"/>
+          </div>
+        </div>
+        <div class="q-form-row">
+          <div class="q-form-group">
+            <label class="q-label">Place of birth *</label>
+            <input type="text" id="place_of_birth" class="q-input" placeholder="NKONGSAMBA"/>
+          </div>
+          <div class="q-form-group">
+            <label class="q-label">Occupation</label>
+            <input type="text" id="occupation" class="q-input" placeholder="ETUDIANT-E-"/>
+          </div>
+        </div>
+        <div class="q-form-row">
+          <div class="q-form-group">
+            <label class="q-label">Height</label>
+            <input type="text" id="height" class="q-input" placeholder="1.8 m"/>
           </div>
           <div class="q-form-group">
             <label class="q-label">Issue date *</label>
             <input type="date" id="doc_issue_date" class="q-input"/>
           </div>
+        </div>
+        <div class="q-form-row">
+          <div class="q-form-group">
+            <label class="q-label">Issuing authority *</label>
+            <input type="text" id="issuing_authority" class="q-input" placeholder="THE DGSN"/>
+          </div>
+          <div class="q-form-group">
+            <label class="q-label">Location *</label>
+            <input type="text" id="location" class="q-input" placeholder="Yaounde, Cameroon"/>
+          </div>
+        </div>
+
+        <!-- MRZ Lines -->
+        <div class="q-form-group">
+          <label class="q-label">MRZ Line 1 <span style="font-size:11px;color:var(--q-text-muted)">(optional)</span></label>
+          <input type="text" id="mrz_line1" class="q-input q-input-mono" placeholder="MBETGA<<YOMBA<<DANIEL<LEO<<<<<<<<"/>
+        </div>
+        <div class="q-form-group">
+          <label class="q-label">MRZ Line 2 <span style="font-size:11px;color:var(--q-text-muted)">(optional)</span></label>
+          <input type="text" id="mrz_line2" class="q-input q-input-mono" placeholder="0501091M3510133CMR<<<<<<<<<<<<<4"/>
+        </div>
+        <div class="q-form-group">
+          <label class="q-label">MRZ Line 3 <span style="font-size:11px;color:var(--q-text-muted)">(optional)</span></label>
+          <input type="text" id="mrz_line3" class="q-input q-input-mono" placeholder="1<CMR1001459AA17315841<<<<<<<<"/>
+        </div>
+
+        <!-- Hidden owner_name field -->
+        <input type="hidden" id="owner_name"/>
+
+        <!-- Fingerprint section -->
+        <div class="fingerprint-section">
+          <div class="fingerprint-header">
+            <span class="fingerprint-icon">👆</span>
+            <div>
+              <div class="fingerprint-title">Fingerprint Registration *</div>
+              <div class="fingerprint-desc">Ask the document owner to place their finger on the sensor</div>
+            </div>
+          </div>
+          <div id="fingerprint-status" class="fingerprint-status fingerprint-status--waiting">
+            Waiting for fingerprint...
+          </div>
+          <button id="fingerprint-btn" class="btn-q-outline w-100" onclick="captureFingerprint()">
+            👆 Capture fingerprint
+          </button>
+          <input type="hidden" id="fingerprint_hash"/>
         </div>
       </div>
 
@@ -207,8 +297,8 @@
     <div id="step-success" style="display:none;">
       <div class="success-area">
         <div class="success-icon">⛓</div>
-        <h3>Item registered on blockchain!</h3>
-        <p>Your item has been successfully registered and verified.</p>
+        <h3>Item submitted for approval!</h3>
+        <p>Your item has been submitted and is pending admin approval.</p>
         <div class="success-details">
           <div class="detail-row">
             <span class="detail-label">Serial number</span>

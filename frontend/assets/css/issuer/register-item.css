@@ -310,6 +310,57 @@ h1, h2, h3, h4, h5, h6 { font-weight: 600; color: var(--q-text); }
 .mt-2  { margin-top: 0.5rem; }
 .mt-3  { margin-top: 1rem; }
 
+/* ── Fingerprint section ── */
+.fingerprint-section {
+  margin-top: 20px;
+  padding: 20px;
+  border: 1.5px solid var(--q-border);
+  border-radius: var(--q-radius);
+  background: rgba(255,255,255,.02);
+}
+.fingerprint-header {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 16px;
+}
+.fingerprint-icon {
+  font-size: 32px;
+}
+.fingerprint-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--q-text);
+  margin-bottom: 4px;
+}
+.fingerprint-desc {
+  font-size: 12px;
+  color: var(--q-text-muted);
+}
+.fingerprint-status {
+  padding: 10px 14px;
+  border-radius: var(--q-radius);
+  font-size: 13px;
+  font-weight: 500;
+  margin-bottom: 12px;
+  text-align: center;
+}
+.fingerprint-status--waiting {
+  background: rgba(138,131,153,.1);
+  color: var(--q-text-muted);
+  border: 1px solid var(--q-border);
+}
+.fingerprint-status--captured {
+  background: rgba(52,211,153,.1);
+  color: #34D399;
+  border: 1px solid rgba(52,211,153,.25);
+}
+.fingerprint-status--error {
+  background: rgba(248,113,113,.1);
+  color: #F87171;
+  border: 1px solid rgba(248,113,113,.25);
+}
+
 /* ── Responsive ── */
 @media (max-width: 900px) {
   .category-grid { grid-template-columns: repeat(2, 1fr); }
