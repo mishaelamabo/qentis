@@ -9,15 +9,14 @@ const HOST     = IS_LOCAL ? 'localhost'
                : hostname;
 
 const API_BASE = {
-    AUTH:         `http://${HOST}:8001/api/auth`,
-    INSTITUTION:  `http://${HOST}:8002/api/institution`,
-    ITEMS:        `http://${HOST}:8003/api/items`,
-    BLOCKCHAIN:   `http://${HOST}:8004/api/blockchain`,
-    OUTPUT:       `http://${HOST}:8005/api/output`,
-    VERIFICATION: `http://${HOST}:8006/api/verify`,
-    ADMIN:        `http://${HOST}:8007/api/admin`,
+    AUTH:         `https://${HOST}/api/auth`,
+    INSTITUTION:  `https://${HOST}/api/institution`,
+    ITEMS:        `https://${HOST}/api/items`,
+    BLOCKCHAIN:   `https://${HOST}/api/blockchain`,
+    OUTPUT:       `https://${HOST}/api/output`,
+    VERIFICATION: `https://${HOST}/api/verify`,
+    ADMIN:        `https://${HOST}/api/admin`,
 };
-
 // ─────────────────────────────────────────────
 // Token & User Management
 // ─────────────────────────────────────────────
