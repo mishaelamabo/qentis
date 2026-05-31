@@ -5,8 +5,7 @@ pipeline {
         VPS_IP       = '207.180.217.238'
         VPS_USER     = 'mishael'
         APP_DIR      = '/home/mishael/qentis'
-        DOCKER_USER  = 'nebamishael'
-        DOCKER_PASS  = credentials('dockerhub-credentials')
+        DOCKER_CREDS = credentials('dockerhub-credentials')
     }
 
     stages {
@@ -45,17 +44,17 @@ pipeline {
         stage('Build & Push to Docker Hub') {
             steps {
                 sh '''
-                    echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin
+                    echo "$DOCKER_CREDS_PSW" | docker login -u "$DOCKER_CREDS_USR" --password-stdin
 
                     cd backend/services
 
-                    docker build -t nebamishael/qentis-user-auth:latest        ./user-auth
-                    docker build -t nebamishael/qentis-institution:latest      ./institution
+                    docker build -t nebamishael/qentis-user-auth:latest         ./user-auth
+                    docker build -t nebamishael/qentis-institution:latest       ./institution
                     docker build -t nebamishael/qentis-item-registration:latest ./item-registration
-                    docker build -t nebamishael/qentis-blockchain:latest       ./blockchain
-                    docker build -t nebamishael/qentis-auth-output:latest      ./auth-output
-                    docker build -t nebamishael/qentis-verification:latest     ./verification
-                    docker build -t nebamishael/qentis-admin-analytics:latest  ./admin-analytics
+                    docker build -t nebamishael/qentis-blockchain:latest        ./blockchain
+                    docker build -t nebamishael/qentis-auth-output:latest       ./auth-output
+                    docker build -t nebamishael/qentis-verification:latest      ./verification
+                    docker build -t nebamishael/qentis-admin-analytics:latest   ./admin-analytics
 
                     docker push nebamishael/qentis-user-auth:latest
                     docker push nebamishael/qentis-institution:latest
