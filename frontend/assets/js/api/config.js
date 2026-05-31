@@ -1,11 +1,12 @@
 // ─────────────────────────────────────────────
 // Qentis — API Configuration
 // ─────────────────────────────────────────────
-
-const IS_LOCAL = window.location.hostname === 'localhost' ||
-                 window.location.hostname === '127.0.0.1';
-
-const HOST = IS_LOCAL ? 'localhost' : '192.168.1.154';
+const hostname = window.location.hostname;
+const IS_LOCAL = hostname === 'localhost' || hostname === '127.0.0.1';
+const IS_LAN   = hostname === '192.168.1.154';
+const HOST     = IS_LOCAL ? 'localhost'
+               : IS_LAN   ? '192.168.1.154'
+               : hostname;
 
 const API_BASE = {
     AUTH:         `http://${HOST}:8001/api/auth`,
@@ -64,12 +65,12 @@ const Auth = {
     guard: (requiredRole = null) => {
         if (!Auth.isLoggedIn() || Auth.isTokenExpired()) {
             Auth.clear();
-            window.location.href = '/frontend/login.html';
+            window.location.href = '/login.html';
             return;
         }
         if (requiredRole && Auth.getRole() !== requiredRole) {
             Auth.clear();
-            window.location.href = '/frontend/login.html';
+            window.location.href = '/login.html';
         }
     },
 
@@ -88,7 +89,7 @@ const Auth = {
             // Clear even if server call fails
         } finally {
             Auth.clear();
-            window.location.href = '/frontend/login.html';
+            window.location.href = '/login.html';
         }
     },
 };
@@ -99,7 +100,7 @@ document.addEventListener('visibilitychange', () => {
         const hasSidebar = document.body.dataset.sidebar;
         if (hasSidebar && (!Auth.isLoggedIn() || Auth.isTokenExpired())) {
             Auth.clear();
-            window.location.href = '/frontend/login.html';
+            window.location.href = '/login.html';
         }
     }
 });
@@ -133,7 +134,7 @@ async function apiRequest(url, options = {}) {
 
         if (response.status === 401) {
             Auth.clear();
-            window.location.href = '/frontend/login.html';
+            window.location.href = '/login.html';
             return;
         }
 
@@ -157,11 +158,11 @@ async function apiRequest(url, options = {}) {
 
 function redirectByRole(role) {
     const map = {
-        ISSUER:   '/frontend/pages/issuer/dashboard.html',
-        ADMIN:    '/frontend/pages/admin/dashboard.html',
-        VERIFIER: '/frontend/pages/verifier/verify.html',
+        ISSUER:   '/pages/issuer/dashboard.html',
+        ADMIN:    '/pages/admin/dashboard.html',
+        VERIFIER: '/pages/verifier/verify.html',
     };
-    window.location.href = map[role] || '/frontend/login.html';
+    window.location.href = map[role] || '/login.html';
 }
 
 // ─────────────────────────────────────────────
