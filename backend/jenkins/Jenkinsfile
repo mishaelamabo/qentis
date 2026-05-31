@@ -82,7 +82,7 @@ pipeline {
                             docker compose stop user-auth institution item-registration blockchain auth-output verification admin-analytics || true
 
                             echo '--- Starting app services only ---'
-                            docker compose up -d --build user-auth institution item-registration blockchain auth-output verification admin-analytics
+                            docker compose up -d --build --no-deps user-auth institution item-registration blockchain auth-output verification admin-analytics
 
                             echo '--- Running migrations ---'
                             sleep 15
