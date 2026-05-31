@@ -76,13 +76,24 @@ pipeline {
                         ssh -o StrictHostKeyChecking=no ${VPS_USER}@${VPS_IP} "
                             set -e
                             cd ${APP_DIR} && git pull origin backend
-                            cd ${APP_DIR}/backend && docker compose stop
+
+                            echo '--- Stopping app services only ---'
+                            cd ${APP_DIR}/backend
+                            docker compose stop user-auth institution item-registration blockchain auth-output verification admin-analytics || true
+
+                            echo '--- Starting all services ---'
                             docker compose up -d --build
-                            sleep 10
+
+                            echo '--- Running migrations ---'
+                            sleep 15
                             for svc in user-auth institution item-registration blockchain auth-output verification admin-analytics; do
                                 docker exec \$svc python manage.py migrate --noinput || true
                             done
+
+                            echo '--- Reloading Nginx ---'
                             sudo nginx -t && sudo systemctl reload nginx
+
+                            echo '--- Services status ---'
                             docker compose ps
                         "
                     '''
