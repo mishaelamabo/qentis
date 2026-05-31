@@ -9,13 +9,13 @@ const HOST     = IS_LOCAL ? 'localhost'
                : hostname;
 
 const API_BASE = {
-    AUTH:         `https://${HOST}/api/auth`,
-    INSTITUTION:  `https://${HOST}/api/institution`,
-    ITEMS:        `https://${HOST}/api/items`,
-    BLOCKCHAIN:   `https://${HOST}/api/blockchain`,
-    OUTPUT:       `https://${HOST}/api/output`,
-    VERIFICATION: `https://${HOST}/api/verify`,
-    ADMIN:        `https://${HOST}/api/admin`,
+    AUTH:         `http://${HOST}/api/auth`,
+    INSTITUTION:  `http://${HOST}/api/institution`,
+    ITEMS:        `http://${HOST}/api/items`,
+    BLOCKCHAIN:   `http://${HOST}/api/blockchain`,
+    OUTPUT:       `http://${HOST}/api/output`,
+    VERIFICATION: `http://${HOST}/api/verify`,
+    ADMIN:        `http://${HOST}/api/admin`,
 };
 // ─────────────────────────────────────────────
 // Token & User Management
