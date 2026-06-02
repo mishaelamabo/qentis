@@ -9,6 +9,8 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY .solcx /root/.solcx
 
+RUN chmod +x /root/.solcx/solc-v0.8.0
+
 COPY . .
 
 EXPOSE 8004
