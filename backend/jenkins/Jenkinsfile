@@ -75,7 +75,7 @@ pipeline {
                     sh '''
                         ssh -o StrictHostKeyChecking=no ${VPS_USER}@${VPS_IP} "
                             set -e
-                            cd ${APP_DIR} && git pull origin backend
+                            cd ${APP_DIR} && git pull origin main
 
                             echo '--- Stopping app services only ---'
                             cd ${APP_DIR}/backend
