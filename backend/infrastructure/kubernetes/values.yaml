@@ -50,13 +50,13 @@ redis:
 
 ganache:
   url: http://ganache:8545
-  contractAddress: "0x981A5F96Bc8C9C633F40D2a4242BdD6CCb390C64"
+  contractAddress: "0xb15aC050E410e53a08Bb8eF086f6eb31C64a1345"
   deployerPrivateKey: "0xd980fc1392d2fddce18279a75775416c9f4f6070bddd38d2d1f496e34193c05f"
 
 ingress:
   enabled: true
   className: nginx
-  host: "207.180.217.238"
+  host: "qentis.local"
 
 resources:
   limits:
