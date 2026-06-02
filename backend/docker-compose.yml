@@ -45,6 +45,8 @@ services:
       --db /data
     networks:
       - qentis_network
+    volumes:
+      - genache_data:/data
     restart: unless-stopped
 
   # ── SERVICES ───────────────────────────────────
