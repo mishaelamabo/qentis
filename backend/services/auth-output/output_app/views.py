@@ -70,7 +70,7 @@ def generate_outputs(request):
         )
         # Convert file path to accessible URL
         qr_filename = os.path.basename(qr_path)
-        results['qr_code_path'] = f"http://localhost:8005/media/qrcodes/{qr_filename}"
+        results['qr_code_path'] = f"http://207.180.217.238/media/qrcodes/{qr_filename}"
 
         # 3. Digital signature — ACADEMIC and DOCUMENT only
         if category in ['ACADEMIC', 'DOCUMENT']:
