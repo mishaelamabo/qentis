@@ -9,13 +9,13 @@ const HOST     = IS_LOCAL ? 'localhost'
                : hostname;
 
 const API_BASE = {
-    AUTH:         `http://${HOST}/api/auth`,
-    INSTITUTION:  `http://${HOST}/api/institution`,
-    ITEMS:        `http://${HOST}/api/items`,
-    BLOCKCHAIN:   `http://${HOST}/api/blockchain`,
-    OUTPUT:       `http://${HOST}/api/output`,
-    VERIFICATION: `http://${HOST}/api/verify`,
-    ADMIN:        `http://${HOST}/api/admin`,
+    AUTH:         `https://qentis.duckdns.org/api/auth`,
+    INSTITUTION:  `https://qentis.duckdns.org/api/institution`,
+    ITEMS:        `https://qentis.duckdns.org/api/items`,
+    BLOCKCHAIN:   `https://qentis.duckdns.org/api/blockchain`,
+    OUTPUT:       `https://qentis.duckdns.org/api/output`,
+    VERIFICATION: `https://qentis.duckdns.org/api/verify`,
+    ADMIN:        `https://qentis.duckdns.org/api/admin`,
 };
 // ─────────────────────────────────────────────
 // Token & User Management
