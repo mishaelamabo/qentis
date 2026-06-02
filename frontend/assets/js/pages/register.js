@@ -68,7 +68,7 @@ async function handleRegister() {
             // Save tokens so user is logged in
             Auth.setTokens(registerData.tokens.access, registerData.tokens.refresh);
             Auth.setUser(registerData.user);
-            window.location.href = '/pending-approval.html';
+            window.location.href = '/frontend/pending-approval.html';
         } else {
             showAlert('alert', applyData.error || 'Account created but institution application failed.', 'error');
         }

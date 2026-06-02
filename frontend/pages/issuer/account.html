@@ -1,1 +1,83 @@
-﻿<!DOCTYPE html><html lang="en"><head>  <meta charset="UTF-8"/>  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>  <title>Account — Qentis</title>  <link href="../../assets/css/issuer/account.css" rel="stylesheet"/></head><body data-role="ISSUER" data-sidebar="issuer" data-page="account"><script src="../../assets/js/api.js"></script><script src="../../assets/js/layout.js"></script><script src="../../assets/js/init.js"></script><main class="q-main">  <div class="q-page-header"><h1>Account</h1><p>This page is being built</p></div>  <div class="q-card"><p class="stub-note">🚧 Connect to API in Week 2/3</p></div></main></body></html>
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Account — Qentis</title>
+  <link href="../../assets/css/issuer/account.css" rel="stylesheet"/>
+</head>
+<body data-role="ISSUER" data-sidebar="issuer" data-page="account">
+
+<script src="../../assets/js/api/config.js"></script>
+<script src="../../assets/js/api/auth.js"></script>
+<script src="../../assets/js/api/institution.js"></script>
+<script src="../../assets/js/layout.js"></script>
+<script src="../../assets/js/init.js"></script>
+
+<main class="q-main">
+  <div class="q-page-header">
+    <h1>My Account</h1>
+    <p>Manage your profile and institution details</p>
+  </div>
+
+  <div id="alert" class="q-alert"></div>
+
+  <div class="q-card">
+    <div class="q-card-header">
+      <div class="q-card-title">Profile information</div>
+    </div>
+    <div id="profile-loading" class="q-loading-state">
+      <div class="q-spinner loading-spinner"></div>
+      <div>Loading profile...</div>
+    </div>
+    <div id="profile-content" style="display:none;">
+      <div class="detail-row">
+        <span class="detail-label">Email:  </span>
+        <span class="detail-value" id="profile-email">—</span>
+      </div>
+      <div class="detail-row">
+        <span class="detail-label">Role:</span>
+        <span class="detail-value" id="profile-role">—</span>
+      </div>
+      <div class="detail-row">
+        <span class="detail-label">Institution:</span>
+        <span class="detail-value" id="profile-institution">—</span>
+      </div>
+      <div class="detail-row">
+        <span class="detail-label">Institution type:</span>
+        <span class="detail-value" id="profile-type">—</span>
+      </div>
+      <div class="detail-row">
+        <span class="detail-label">:Institution status</span>
+        <span class="detail-value" id="profile-status">—</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="q-card" style="margin-top:24px;">
+    <div class="q-card-header">
+      <div class="q-card-title">Change password</div>
+    </div>
+    <div class="q-form-group">
+      <label class="q-label">Current password</label>
+      <input type="password" id="old-password" class="q-input" placeholder="••••••••"/>
+    </div>
+    <div class="q-form-group">
+      <label class="q-label">New password</label>
+      <input type="password" id="new-password" class="q-input" placeholder="••••••••"/>
+    </div>
+    <div class="q-form-group">
+      <label class="q-label">Confirm new password</label>
+      <input type="password" id="new-password2" class="q-input" placeholder="••••••••"/>
+    </div>
+    <div id="password-alert" class="q-alert"></div>
+    <button id="change-password-btn" class="btn-q-primary" onclick="handleChangePassword()">
+      Update password
+    </button>
+  </div>
+
+</main>
+
+<script src="../../assets/js/issuer/account.js"></script>
+</body>
+</html>

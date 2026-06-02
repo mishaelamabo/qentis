@@ -39,9 +39,9 @@ async function handleLogin() {
 function redirectByRole(role) {
     if (!role) return;
     const map = {
-        ISSUER:   '../pages/issuer/dashboard.html',
-        ADMIN:    '../pages/admin/dashboard.html',
-        VERIFIER: '../pages/verifier/verify.html',
+        ISSUER:   '../frontend/pages/issuer/dashboard.html',
+        ADMIN:    '../frontend/pages/admin/dashboard.html',
+        VERIFIER: '../frontend/pages/verifier/verify.html',
     };
     window.location.href = map[role] || '../index.html';
 }

@@ -1,17 +1,22 @@
 // ─────────────────────────────────────────────
 // Qentis — API Configuration
 // ─────────────────────────────────────────────
+const hostname = window.location.hostname;
+const IS_LOCAL = hostname === 'localhost' || hostname === '127.0.0.1';
+const IS_LAN   = hostname === '192.168.1.154';
+const HOST     = IS_LOCAL ? 'localhost'
+               : IS_LAN   ? '192.168.1.154'
+               : hostname;
 
 const API_BASE = {
-    AUTH:         'http://localhost:8001/api/auth',
-    INSTITUTION:  'http://localhost:8002/api/institution',
-    ITEMS:        'http://localhost:8003/api/items',
-    BLOCKCHAIN:   'http://localhost:8004/api/blockchain',
-    OUTPUT:       'http://localhost:8005/api/output',
-    VERIFICATION: 'http://localhost:8006/api/verify',
-    ADMIN:        'http://localhost:8007/api/admin',
+    AUTH:         `https://qentis.duckdns.org/api/auth`,
+    INSTITUTION:  `https://qentis.duckdns.org/api/institution`,
+    ITEMS:        `https://qentis.duckdns.org/api/items`,
+    BLOCKCHAIN:   `https://qentis.duckdns.org/api/blockchain`,
+    OUTPUT:       `https://qentis.duckdns.org/api/output`,
+    VERIFICATION: `https://qentis.duckdns.org/api/verify`,
+    ADMIN:        `https://qentis.duckdns.org/api/admin`,
 };
-
 // ─────────────────────────────────────────────
 // Token & User Management
 // ─────────────────────────────────────────────
@@ -24,11 +29,13 @@ const Auth = {
 
     setToken: (access) => {
         localStorage.setItem('qentis_token', access);
+        localStorage.setItem('qentis_token_time', Date.now().toString());
     },
 
     setTokens: (access, refresh) => {
         localStorage.setItem('qentis_token', access);
         localStorage.setItem('qentis_refresh', refresh);
+        localStorage.setItem('qentis_token_time', Date.now().toString());
     },
 
     setUser: (user) => {
@@ -41,16 +48,27 @@ const Auth = {
         localStorage.removeItem('qentis_refresh');
         localStorage.removeItem('qentis_user');
         localStorage.removeItem('qentis_role');
+        localStorage.removeItem('qentis_token_time');
     },
 
     isLoggedIn: () => !!localStorage.getItem('qentis_token'),
 
+    isTokenExpired: () => {
+        const tokenTime = localStorage.getItem('qentis_token_time');
+        if (!tokenTime) return true;
+        const elapsed = Date.now() - parseInt(tokenTime);
+        const sixtyMinutes = 60 * 60 * 1000;
+        return elapsed > sixtyMinutes;
+    },
+
     guard: (requiredRole = null) => {
-        if (!Auth.isLoggedIn()) {
+        if (!Auth.isLoggedIn() || Auth.isTokenExpired()) {
+            Auth.clear();
             window.location.href = '/login.html';
             return;
         }
         if (requiredRole && Auth.getRole() !== requiredRole) {
+            Auth.clear();
             window.location.href = '/login.html';
         }
     },
@@ -74,6 +92,17 @@ const Auth = {
         }
     },
 };
+
+// ── Re-check token when user comes back to the tab ──
+document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') {
+        const hasSidebar = document.body.dataset.sidebar;
+        if (hasSidebar && (!Auth.isLoggedIn() || Auth.isTokenExpired())) {
+            Auth.clear();
+            window.location.href = '/login.html';
+        }
+    }
+});
 
 // ─────────────────────────────────────────────
 // HTTP Headers

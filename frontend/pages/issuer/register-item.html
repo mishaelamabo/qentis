@@ -1,1 +1,337 @@
-﻿<!DOCTYPE html><html lang="en"><head>  <meta charset="UTF-8"/>  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>  <title>Register Item — Qentis</title>  <link href="../../assets/css/issuer/register-item.css" rel="stylesheet"/></head><body data-role="ISSUER" data-sidebar="issuer" data-page="register-item"><script src="../../assets/js/api.js"></script><script src="../../assets/js/layout.js"></script><script src="../../assets/js/init.js"></script><main class="q-main">  <div class="q-page-header"><h1>Register Item</h1><p>Register a new item for blockchain authentication</p></div>  <div class="q-card"><p class="stub-note">🚧 Coming in Week 2 — connect to item registration API</p></div></main></body></html>
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Register Item — Qentis</title>
+  <link href="../../assets/css/issuer/register-item.css" rel="stylesheet"/>
+</head>
+<body data-role="ISSUER" data-sidebar="issuer" data-page="register-item">
+
+<script src="../../assets/js/api/config.js"></script>
+<script src="../../assets/js/api/auth.js"></script>
+<script src="../../assets/js/api/items.js"></script>
+<script src="../../assets/js/api/institution.js"></script>
+<script src="../../assets/js/layout.js"></script>
+<script src="../../assets/js/init.js"></script>
+
+<main class="q-main">
+  <div class="q-page-header">
+    <h1>Register Item</h1>
+    <p>Register a new item for blockchain authentication</p>
+  </div>
+
+  <div class="q-card">
+    <div id="alert" class="q-alert"></div>
+
+    <!-- Step 1: Select Category -->
+    <div id="step-category">
+      <h3 class="q-card-title">Step 1 — Select category</h3>
+      <div class="category-grid">
+        <div class="category-card" onclick="selectCategory('CERTIFICATE')">
+          <div class="category-icon">🎓</div>
+          <div class="category-name">Certificate</div>
+          <div class="category-desc">Academic diplomas & degrees</div>
+        </div>
+        <div class="category-card" onclick="selectCategory('PHARMACEUTICAL')">
+          <div class="category-icon">💊</div>
+          <div class="category-name">Pharmaceutical</div>
+          <div class="category-desc">Medicines & drug products</div>
+        </div>
+        <div class="category-card" onclick="selectCategory('DOCUMENT')">
+          <div class="category-icon">📄</div>
+          <div class="category-name">Document</div>
+          <div class="category-desc">IDs, passports & legal papers</div>
+        </div>
+        <div class="category-card" onclick="selectCategory('BANKNOTE')">
+          <div class="category-icon">💵</div>
+          <div class="category-name">Banknote</div>
+          <div class="category-desc">Banknotes & currency</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Step 2: Fill form -->
+    <div id="step-form" style="display:none;">
+      <div class="step-header">
+        <button class="btn-q-outline btn-sm" onclick="goBackToCategory()">← Change category</button>
+        <h3 class="q-card-title" id="form-title">Step 2 — Item details</h3>
+      </div>
+
+      <!-- CERTIFICATE fields -->
+      <div id="fields-CERTIFICATE" class="category-fields" style="display:none;">
+        <div class="q-form-row">
+          <div class="q-form-group">
+            <label class="q-label">Student name *</label>
+            <input type="text" id="student_name" class="q-input" placeholder="John Doe"/>
+          </div>
+          <div class="q-form-group">
+            <label class="q-label">Matricule *</label>
+            <input type="text" id="matricule" class="q-input" placeholder="ICTU20233822"/>
+          </div>
+        </div>
+        <div class="q-form-row">
+          <div class="q-form-group">
+            <label class="q-label">Degree *</label>
+            <input type="text" id="degree" class="q-input" placeholder="Bachelor of Science in Software Engineering"/>
+          </div>
+          <div class="q-form-group">
+            <label class="q-label">Grade *</label>
+            <input type="text" id="grade" class="q-input" placeholder="First Class"/>
+          </div>
+        </div>
+        <div class="q-form-row">
+          <div class="q-form-group">
+            <label class="q-label">Graduation date *</label>
+            <input type="date" id="graduation_date" class="q-input"/>
+          </div>
+        </div>
+      </div>
+
+      <!-- PHARMACEUTICAL fields -->
+      <div id="fields-PHARMACEUTICAL" class="category-fields" style="display:none;">
+        <div class="q-form-row">
+          <div class="q-form-group">
+            <label class="q-label">Drug name *</label>
+            <input type="text" id="drug_name" class="q-input" placeholder="Paracetamol 500mg"/>
+          </div>
+          <div class="q-form-group">
+            <label class="q-label">Batch number *</label>
+            <input type="text" id="batch_number" class="q-input" placeholder="BATCH-2026-001"/>
+          </div>
+        </div>
+        <div class="q-form-row">
+          <div class="q-form-group">
+            <label class="q-label">Manufacturer *</label>
+            <input type="text" id="manufacturer" class="q-input" placeholder="Cameroon Pharma Ltd"/>
+          </div>
+          <div class="q-form-group">
+            <label class="q-label">Factory location *</label>
+            <input type="text" id="factory_location" class="q-input" placeholder="Douala, Cameroon"/>
+          </div>
+        </div>
+        <div class="q-form-row">
+          <div class="q-form-group">
+            <label class="q-label">Production date *</label>
+            <input type="date" id="production_date" class="q-input"/>
+          </div>
+          <div class="q-form-group">
+            <label class="q-label">Expiry date *</label>
+            <input type="date" id="expiry_date" class="q-input"/>
+          </div>
+        </div>
+      </div>
+
+      <!-- DOCUMENT fields — New CNI Format -->
+      <div id="fields-DOCUMENT" class="category-fields" style="display:none;">
+        <div class="q-form-row">
+          <div class="q-form-group">
+            <label class="q-label">Document type *</label>
+            <select id="document_type" class="q-select">
+              <option value="">Select type...</option>
+              <option value="NATIONAL_ID">National ID (New Format)</option>
+              <option value="NATIONAL_ID_OLD">National ID (Old Format)</option>
+              <option value="PASSPORT">Passport</option>
+              <option value="BIRTH_CERTIFICATE">Birth Certificate</option>
+              <option value="LEGAL_DOCUMENT">Legal Document</option>
+            </select>
+          </div>
+          <div class="q-form-group">
+            <label class="q-label">NIC Number * <span style="font-size:11px;color:var(--q-text-muted)">(e.g. AA17315841)</span></label>
+            <input type="text" id="reference_number" class="q-input" placeholder="AA17315841"/>
+          </div>
+        </div>
+        <div class="q-form-row">
+          <div class="q-form-group">
+            <label class="q-label">Card Number * <span style="font-size:11px;color:var(--q-text-muted)">(e.g. 101001459)</span></label>
+            <input type="text" id="card_number" class="q-input" placeholder="101001459"/>
+          </div>
+          <div class="q-form-group">
+            <label class="q-label">Surname *</label>
+            <input type="text" id="owner_surname" class="q-input" placeholder="MBETGA YOMBA"/>
+          </div>
+        </div>
+        <div class="q-form-row">
+          <div class="q-form-group">
+            <label class="q-label">Given names *</label>
+            <input type="text" id="owner_given_names" class="q-input" placeholder="DANIEL LEO"/>
+          </div>
+          <div class="q-form-group">
+            <label class="q-label">Sex *</label>
+            <select id="sex" class="q-select">
+              <option value="">Select...</option>
+              <option value="M">Male</option>
+              <option value="F">Female</option>
+            </select>
+          </div>
+        </div>
+        <div class="q-form-row">
+          <div class="q-form-group">
+            <label class="q-label">Date of birth *</label>
+            <input type="date" id="date_of_birth" class="q-input"/>
+          </div>
+          <div class="q-form-group">
+            <label class="q-label">Date of expiry *</label>
+            <input type="date" id="date_of_expiry" class="q-input"/>
+          </div>
+        </div>
+        <div class="q-form-row">
+          <div class="q-form-group">
+            <label class="q-label">Father's name *</label>
+            <input type="text" id="father_name" class="q-input" placeholder="YOMBA DANIEL"/>
+          </div>
+          <div class="q-form-group">
+            <label class="q-label">Mother's name *</label>
+            <input type="text" id="mother_name" class="q-input" placeholder="MAFOBOUE KOLLA MELANIE"/>
+          </div>
+        </div>
+        <div class="q-form-row">
+          <div class="q-form-group">
+            <label class="q-label">Place of birth *</label>
+            <input type="text" id="place_of_birth" class="q-input" placeholder="NKONGSAMBA"/>
+          </div>
+          <div class="q-form-group">
+            <label class="q-label">Occupation</label>
+            <input type="text" id="occupation" class="q-input" placeholder="ETUDIANT-E-"/>
+          </div>
+        </div>
+        <div class="q-form-row">
+          <div class="q-form-group">
+            <label class="q-label">Height</label>
+            <input type="text" id="height" class="q-input" placeholder="1.8 m"/>
+          </div>
+          <div class="q-form-group">
+            <label class="q-label">Issue date *</label>
+            <input type="date" id="doc_issue_date" class="q-input"/>
+          </div>
+        </div>
+        <div class="q-form-row">
+          <div class="q-form-group">
+            <label class="q-label">Issuing authority *</label>
+            <input type="text" id="issuing_authority" class="q-input" placeholder="THE DGSN"/>
+          </div>
+          <div class="q-form-group">
+            <label class="q-label">Location *</label>
+            <input type="text" id="location" class="q-input" placeholder="Yaounde, Cameroon"/>
+          </div>
+        </div>
+
+        <!-- MRZ Lines -->
+        <div class="q-form-group">
+          <label class="q-label">MRZ Line 1 <span style="font-size:11px;color:var(--q-text-muted)">(optional)</span></label>
+          <input type="text" id="mrz_line1" class="q-input q-input-mono" placeholder="MBETGA<<YOMBA<<DANIEL<LEO<<<<<<<<"/>
+        </div>
+        <div class="q-form-group">
+          <label class="q-label">MRZ Line 2 <span style="font-size:11px;color:var(--q-text-muted)">(optional)</span></label>
+          <input type="text" id="mrz_line2" class="q-input q-input-mono" placeholder="0501091M3510133CMR<<<<<<<<<<<<<4"/>
+        </div>
+        <div class="q-form-group">
+          <label class="q-label">MRZ Line 3 <span style="font-size:11px;color:var(--q-text-muted)">(optional)</span></label>
+          <input type="text" id="mrz_line3" class="q-input q-input-mono" placeholder="1<CMR1001459AA17315841<<<<<<<<"/>
+        </div>
+
+        <!-- Hidden owner_name field -->
+        <input type="hidden" id="owner_name"/>
+
+        <!-- Fingerprint section -->
+        <div class="fingerprint-section">
+          <div class="fingerprint-header">
+            <span class="fingerprint-icon">👆</span>
+            <div>
+              <div class="fingerprint-title">Fingerprint Registration *</div>
+              <div class="fingerprint-desc">Ask the document owner to place their finger on the sensor</div>
+            </div>
+          </div>
+          <div id="fingerprint-status" class="fingerprint-status fingerprint-status--waiting">
+            Waiting for fingerprint...
+          </div>
+          <button id="fingerprint-btn" class="btn-q-outline w-100" onclick="captureFingerprint()">
+            👆 Capture fingerprint
+          </button>
+          <input type="hidden" id="fingerprint_hash"/>
+        </div>
+      </div>
+
+      <!-- BANKNOTE fields -->
+      <div id="fields-BANKNOTE" class="category-fields" style="display:none;">
+        <div class="q-form-row">
+          <div class="q-form-group">
+            <label class="q-label">Currency *</label>
+            <input type="text" id="currency" class="q-input" placeholder="XAF"/>
+          </div>
+          <div class="q-form-group">
+            <label class="q-label">Denomination *</label>
+            <input type="text" id="denomination" class="q-input" placeholder="5000"/>
+          </div>
+        </div>
+        <div class="q-form-row">
+          <div class="q-form-group">
+            <label class="q-label">Serial number *</label>
+            <input type="text" id="banknote_serial" class="q-input" placeholder="BN-2026-001"/>
+          </div>
+          <div class="q-form-group">
+            <label class="q-label">Series *</label>
+            <input type="text" id="series" class="q-input" placeholder="2026-A"/>
+          </div>
+        </div>
+        <div class="q-form-row">
+          <div class="q-form-group">
+            <label class="q-label">Issue date *</label>
+            <input type="date" id="banknote_issue_date" class="q-input"/>
+          </div>
+          <div class="q-form-group">
+            <label class="q-label">Issuing bank *</label>
+            <input type="text" id="issuing_bank" class="q-input" placeholder="BEAC"/>
+          </div>
+        </div>
+      </div>
+
+      <div class="form-actions">
+        <button id="submit-btn" class="btn-q-primary" onclick="handleRegisterItem()">
+          Register on blockchain
+        </button>
+      </div>
+    </div>
+
+    <!-- Step 3: Success -->
+    <div id="step-success" style="display:none;">
+      <div class="success-area">
+        <div class="success-icon">⛓</div>
+        <h3>Item submitted for approval!</h3>
+        <p>Your item has been submitted and is pending admin approval.</p>
+        <div class="success-details">
+          <div class="detail-row">
+            <span class="detail-label">Serial number</span>
+            <span class="detail-value" id="success-serial">—</span>
+          </div>
+          <div class="detail-row">
+            <span class="detail-label">Blockchain hash</span>
+            <span class="detail-value hash-value" id="success-hash">—</span>
+          </div>
+          <div class="detail-row">
+            <span class="detail-label">Transaction</span>
+            <span class="detail-value hash-value" id="success-tx">—</span>
+          </div>
+          <div class="detail-row">
+            <span class="detail-label">Category</span>
+            <span class="detail-value" id="success-category">—</span>
+          </div>
+          <div class="detail-row">
+            <span class="detail-label">Status</span>
+            <span class="detail-value" id="success-status">—</span>
+          </div>
+        </div>
+        <div class="success-actions">
+          <button class="btn-q-primary" onclick="registerAnother()">Register another item</button>
+          <a href="my-items.html" class="btn-q-outline">View my items</a>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</main>
+
+<script src="../../assets/js/issuer/register-item.js"></script>
+
+</body>
+</html>

@@ -7,71 +7,71 @@ async function loadAllIssuers() {
         const res = await fetch(`${API_BASE.INSTITUTION}/all/`, {
             headers: headers.auth()
         });
-        const data = await res.json();
+        const data    = await res.json();
         const issuers = Array.isArray(data) ? data : [];
-        const container = document.getElementById('issuers-list');
+
+        document.getElementById('issuers-loading').style.display = 'none';
 
         if (issuers.length === 0) {
-            container.innerHTML = '<p class="q-empty">No institutions found.</p>';
+            document.getElementById('issuers-empty').style.display = 'block';
             return;
         }
 
-        container.innerHTML = `
-            <table class="q-table">
-                <thead>
-                    <tr>
-                        <th>Institution</th>
-                        <th>Type</th>
-                        <th>Country</th>
-                        <th>Email</th>
-                        <th>Status</th>
-                        <th>Registered</th>
-                        <th>Actions</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    ${issuers.map(inst => `
-                        <tr id="row-${inst.id}">
-                            <td>${inst.name}</td>
-                            <td>${inst.institution_type}</td>
-                            <td>${inst.country}</td>
-                            <td>${inst.contact_email}</td>
-                            <td>
-                                <span class="q-badge q-badge--${getBadgeClass(inst.status)}">
-                                    ${inst.status}
-                                </span>
-                            </td>
-                            <td>${formatDate(inst.created_at)}</td>
-                            <td>
-                                ${inst.status === 'APPROVED' ? `
-                                    <button
-                                        class="btn-q-danger"
-                                        style="padding:4px 12px;font-size:12px"
-                                        onclick="revokeIssuer('${inst.id}')">
-                                        Revoke
-                                    </button>
-                                ` : '—'}
-                            </td>
-                        </tr>
-                    `).join('')}
-                </tbody>
-            </table>
-        `;
+        document.getElementById('issuers-table-wrap').style.display = 'block';
+        const tbody = document.getElementById('issuers-body');
+        tbody.innerHTML = '';
+
+        issuers.forEach(inst => {
+            const tr = document.createElement('tr');
+            tr.id = `row-${inst.id}`;
+
+            const tdName = document.createElement('td');
+            tdName.textContent = inst.name;
+
+            const tdType = document.createElement('td');
+            tdType.textContent = inst.institution_type;
+
+            const tdCountry = document.createElement('td');
+            tdCountry.textContent = inst.country;
+
+            const tdEmail = document.createElement('td');
+            tdEmail.textContent = inst.contact_email;
+
+            const tdStatus = document.createElement('td');
+            const badge = document.createElement('span');
+            badge.className   = `q-badge q-badge-${inst.status.toLowerCase()}`;
+            badge.textContent = inst.status;
+            tdStatus.appendChild(badge);
+
+            const tdDate = document.createElement('td');
+            tdDate.textContent = formatDate(inst.created_at);
+
+            const tdAction = document.createElement('td');
+            if (inst.status === 'APPROVED') {
+                const btn = document.createElement('button');
+                btn.className   = 'btn-q-danger';
+                btn.style.cssText = 'padding:4px 12px;font-size:12px';
+                btn.textContent = 'Revoke';
+                btn.onclick     = () => revokeIssuer(inst.id);
+                tdAction.appendChild(btn);
+            } else {
+                tdAction.textContent = '—';
+            }
+
+            tr.appendChild(tdName);
+            tr.appendChild(tdType);
+            tr.appendChild(tdCountry);
+            tr.appendChild(tdEmail);
+            tr.appendChild(tdStatus);
+            tr.appendChild(tdDate);
+            tr.appendChild(tdAction);
+            tbody.appendChild(tr);
+        });
 
     } catch (error) {
-        document.getElementById('issuers-list').innerHTML =
-            '<p class="q-error">Failed to load issuers.</p>';
+        document.getElementById('issuers-loading').style.display = 'none';
+        showAlert('alert', 'Failed to load issuers.', 'error');
     }
-}
-
-function getBadgeClass(status) {
-    const map = {
-        APPROVED: 'success',
-        PENDING:  'warning',
-        REJECTED: 'danger',
-        REVOKED:  'danger',
-    };
-    return map[status] || 'default';
 }
 
 async function revokeIssuer(institutionId) {
@@ -86,7 +86,7 @@ async function revokeIssuer(institutionId) {
         });
 
         if (res.ok) {
-            showSuccess('alert', 'Institution revoked successfully.');
+            showAlert('alert', 'Institution revoked successfully.', 'success');
             loadAllIssuers();
         } else {
             const data = await res.json();

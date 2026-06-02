@@ -2,6 +2,8 @@
 // Qentis — Admin Dashboard
 // ─────────────────────────────────────────────
 
+Auth.guard('ADMIN');
+
 async function loadDashboard() {
     try {
         // Load pending institutions
@@ -56,45 +58,52 @@ async function loadDashboard() {
         const allInstitutions = Array.isArray(allData) ? allData : [];
         document.getElementById('stat-institutions').textContent = allInstitutions.length;
 
-        // Load fraud flags
-        const flagsRes = await fetch(`${API_BASE.VERIFICATION}/flags/`, {
-            headers: headers.auth()
-        });
-        const flagsData = await flagsRes.json();
-        const flags = Array.isArray(flagsData) ? flagsData : [];
-        const openFlags = flags.filter(f => f.status === 'OPEN');
-        document.getElementById('stat-flags').textContent = openFlags.length;
-
-        if (openFlags.length === 0) {
+        // Load fraud flags — handle gracefully if forbidden
+        try {
+            const flagsRes = await fetch(`${API_BASE.VERIFICATION}/flags/`, {
+                headers: headers.auth()
+            });
+            if (flagsRes.ok) {
+                const flagsData = await flagsRes.json();
+                const flags = Array.isArray(flagsData) ? flagsData : [];
+                const openFlags = flags.filter(f => f.status === 'OPEN');
+                document.getElementById('stat-flags').textContent = openFlags.length;
+                if (openFlags.length === 0) {
+                    document.getElementById('flags-list').innerHTML =
+                        '<p class="q-empty">No open fraud flags.</p>';
+                } else {
+                    document.getElementById('flags-list').innerHTML = `
+                        <table class="q-table">
+                            <thead>
+                                <tr>
+                                    <th>Item ID</th>
+                                    <th>Verifications</th>
+                                    <th>Flagged At</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${openFlags.slice(0, 5).map(flag => `
+                                    <tr>
+                                        <td style="font-family:monospace;font-size:12px">${flag.item_id}</td>
+                                        <td>${flag.verification_count}</td>
+                                        <td>${formatDateTime(flag.flagged_at)}</td>
+                                        <td><span class="q-badge q-badge--warning">OPEN</span></td>
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                        </table>
+                    `;
+                }
+            } else {
+                document.getElementById('stat-flags').textContent = '0';
+                document.getElementById('flags-list').innerHTML =
+                    '<p class="q-empty">No open fraud flags.</p>';
+            }
+        } catch (e) {
+            document.getElementById('stat-flags').textContent = '0';
             document.getElementById('flags-list').innerHTML =
                 '<p class="q-empty">No open fraud flags.</p>';
-        } else {
-            document.getElementById('flags-list').innerHTML = `
-                <table class="q-table">
-                    <thead>
-                        <tr>
-                            <th>Item ID</th>
-                            <th>Verifications</th>
-                            <th>Flagged At</th>
-                            <th>Status</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        ${openFlags.slice(0, 5).map(flag => `
-                            <tr>
-                                <td style="font-family:monospace;font-size:12px">
-                                    ${flag.item_id}
-                                </td>
-                                <td>${flag.verification_count}</td>
-                                <td>${formatDateTime(flag.flagged_at)}</td>
-                                <td>
-                                    <span class="q-badge q-badge--warning">OPEN</span>
-                                </td>
-                            </tr>
-                        `).join('')}
-                    </tbody>
-                </table>
-            `;
         }
 
         // Placeholder stats
