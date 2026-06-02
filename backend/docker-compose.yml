@@ -46,7 +46,7 @@ services:
     networks:
       - qentis_network
     volumes:
-      - genache_data:/data
+      - ganache_data:/data
     restart: unless-stopped
 
   # ── SERVICES ───────────────────────────────────
