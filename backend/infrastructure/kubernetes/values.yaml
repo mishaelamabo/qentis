@@ -50,7 +50,7 @@ redis:
 
 ganache:
   url: http://ganache:8545
-  contractAddress: "0xb15aC050E410e53a08Bb8eF086f6eb31C64a1345"
+  contractAddress: "0xe78A0F7E598Cc8b0Bb87894B0F60dD2a88d6a8Ab"
   deployerPrivateKey: "0xd980fc1392d2fddce18279a75775416c9f4f6070bddd38d2d1f496e34193c05f"
 
 ingress:
