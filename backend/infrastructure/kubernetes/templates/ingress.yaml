@@ -7,7 +7,7 @@ metadata:
 spec:
   ingressClassName: nginx
   rules:
-    - host: "207.180.217.238"
+    - host: "{{ .Values.ingress.host }}"
       http:
         paths:
           - path: /api/auth/
