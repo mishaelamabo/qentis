@@ -299,5 +299,40 @@ h1, h2, h3, h4, h5, h6 { font-weight: 600; color: var(--q-text); }
 /* ── Responsive ── */
 @media (max-width: 768px) {
   .q-sidebar { display: none; }
-  .q-main { margin-left: 0; padding: 20px 16px; }
+  .q-main { margin-left: 0; padding: 16px 12px; }
+
+  /* Table scrollable on mobile */
+  .q-card { padding: 12px; overflow-x: auto; }
+  .q-table { min-width: 600px; }
+  .q-table th, .q-table td { padding: 10px 10px; font-size: 12px; }
+
+  /* Modal full screen on mobile */
+  .q-modal-content {
+    width: 100%;
+    max-width: 100%;
+    max-height: 95vh;
+    border-radius: 12px 12px 0 0;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+  }
+  .q-modal {
+    align-items: flex-end;
+  }
+
+  /* Modal footer stack on mobile */
+  .q-modal-footer {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .q-modal-footer button {
+    flex: 1;
+    min-width: 100px;
+    text-align: center;
+  }
+
+  /* Page header smaller */
+  .q-page-header h1 { font-size: 18px; }
+  .q-page-header p { font-size: 13px; }
 }
