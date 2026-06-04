@@ -87,7 +87,7 @@ pipeline {
                             echo '--- Running migrations ---'
                             sleep 15
                             for svc in user-auth institution item-registration blockchain auth-output verification admin-analytics; do
-                                docker exec \$svc python manage.py migrate --noinput || true
+                                docker exec \${svc} python manage.py migrate --noinput || true
                             done
 
                             echo '--- Reloading Nginx ---'
