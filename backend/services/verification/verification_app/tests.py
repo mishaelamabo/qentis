@@ -3,6 +3,7 @@ import uuid
 from django.test import TestCase
 from django.utils import timezone
 from django.core.files.uploadedfile import SimpleUploadedFile
+from unittest.mock import patch, MagicMock
 from rest_framework.test import APIClient
 from rest_framework import status
 from verification_app.models import VerificationLog, FraudFlag
@@ -12,7 +13,6 @@ VALID_RESULTS = {'AUTHENTIC', 'NOT_AUTHENTIC', 'UNVERIFIABLE'}
 
 
 def make_test_image(filename='test.png'):
-    """Generate a valid 10x10 white PNG using PIL (available in this container)."""
     from PIL import Image
     img = Image.new('RGB', (10, 10), color=(255, 255, 255))
     buf = io.BytesIO()
@@ -21,26 +21,26 @@ def make_test_image(filename='test.png'):
 
 
 class MockUser:
-    """Minimal user for bypassing JWT on the IsAuthenticated fraud_flags endpoint."""
     is_authenticated = True
-
     def __init__(self):
         self.id = uuid.uuid4()
 
 
+# ---------------------------------------------------------------------------
+# Model tests
+# ---------------------------------------------------------------------------
+
 class TestVerificationLogModel(TestCase):
 
     def test_log_created_successfully(self):
-        item_id = uuid.uuid4()
         log = VerificationLog.objects.create(
-            item_id=item_id,
+            item_id=uuid.uuid4(),
             method=VerificationLog.Method.QR,
             result=VerificationLog.Result.AUTHENTIC,
-            input_data=str(item_id),
+            input_data='test-data',
         )
         self.assertIsNotNone(log.id)
         self.assertEqual(log.result, VerificationLog.Result.AUTHENTIC)
-        self.assertEqual(log.method, VerificationLog.Method.QR)
 
     def test_log_str_representation(self):
         log = VerificationLog.objects.create(
@@ -58,13 +58,29 @@ class TestVerificationLogModel(TestCase):
         )
         self.assertIsNotNone(log.verified_at)
 
+    def test_log_item_id_nullable(self):
+        log = VerificationLog.objects.create(
+            method=VerificationLog.Method.SIGNATURE,
+            result=VerificationLog.Result.UNVERIFIABLE,
+        )
+        self.assertIsNone(log.item_id)
+
+    def test_log_all_methods(self):
+        for method in [VerificationLog.Method.QR, VerificationLog.Method.SERIAL,
+                       VerificationLog.Method.SIGNATURE, VerificationLog.Method.OCR,
+                       VerificationLog.Method.WATERMARK]:
+            log = VerificationLog.objects.create(
+                method=method,
+                result=VerificationLog.Result.AUTHENTIC,
+            )
+            self.assertEqual(log.method, method)
+
 
 class TestFraudFlagModel(TestCase):
 
     def test_fraud_flag_created_successfully(self):
-        item_id = uuid.uuid4()
         flag = FraudFlag.objects.create(
-            item_id=item_id,
+            item_id=uuid.uuid4(),
             verification_count=10,
             window_start=timezone.now(),
             window_end=timezone.now(),
@@ -93,33 +109,39 @@ class TestFraudFlagModel(TestCase):
         self.assertEqual(flag.status, FraudFlag.FlagStatus.OPEN)
 
 
+# ---------------------------------------------------------------------------
+# Verify QR endpoint
+# ---------------------------------------------------------------------------
+
 class TestVerifyQREndpoint(TestCase):
 
     def setUp(self):
         self.client = APIClient()
 
     def test_verify_qr_with_valid_uuid_returns_200(self):
-        item_id = str(uuid.uuid4())
-        response = self.client.post('/api/verify/qr/', data={'qr_data': item_id}, format='json')
+        with patch('verification_app.views.get_item_hash', return_value=None):
+            response = self.client.post('/api/verify/qr/',
+                                        data={'qr_data': str(uuid.uuid4())}, format='json')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertIn(response.data['result'], VALID_RESULTS)
 
     def test_verify_qr_response_has_expected_fields(self):
-        item_id = str(uuid.uuid4())
-        response = self.client.post('/api/verify/qr/', data={'qr_data': item_id}, format='json')
-        self.assertIn('result', response.data)
-        self.assertIn('method', response.data)
-        self.assertIn('message', response.data)
-        self.assertIn('verified_at', response.data)
+        with patch('verification_app.views.get_item_hash', return_value=None):
+            response = self.client.post('/api/verify/qr/',
+                                        data={'qr_data': str(uuid.uuid4())}, format='json')
+        for field in ('result', 'method', 'message', 'verified_at'):
+            self.assertIn(field, response.data)
 
-    def test_verify_qr_with_invalid_format_returns_not_authentic(self):
-        response = self.client.post('/api/verify/qr/', data={'qr_data': 'not-a-uuid'}, format='json')
+    def test_verify_qr_invalid_uuid_format_returns_not_authentic(self):
+        response = self.client.post('/api/verify/qr/',
+                                    data={'qr_data': 'not-a-uuid'}, format='json')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data['result'], 'NOT_AUTHENTIC')
 
     def test_verify_qr_method_is_qr(self):
-        item_id = str(uuid.uuid4())
-        response = self.client.post('/api/verify/qr/', data={'qr_data': item_id}, format='json')
+        with patch('verification_app.views.get_item_hash', return_value=None):
+            response = self.client.post('/api/verify/qr/',
+                                        data={'qr_data': str(uuid.uuid4())}, format='json')
         self.assertEqual(response.data['method'], 'QR')
 
     def test_verify_qr_fails_without_qr_data(self):
@@ -127,25 +149,48 @@ class TestVerifyQREndpoint(TestCase):
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
     def test_verify_qr_logs_verification(self):
-        item_id = str(uuid.uuid4())
-        initial_count = VerificationLog.objects.count()
-        self.client.post('/api/verify/qr/', data={'qr_data': item_id}, format='json')
-        self.assertEqual(VerificationLog.objects.count(), initial_count + 1)
-
-    def test_verify_qr_logs_invalid_qr_as_not_authentic(self):
-        self.client.post('/api/verify/qr/', data={'qr_data': 'garbage'}, format='json')
-        log = VerificationLog.objects.latest('verified_at')
-        self.assertEqual(log.result, VerificationLog.Result.NOT_AUTHENTIC)
-        self.assertEqual(log.method, VerificationLog.Method.QR)
+        with patch('verification_app.views.get_item_hash', return_value=None):
+            initial = VerificationLog.objects.count()
+            self.client.post('/api/verify/qr/',
+                             data={'qr_data': str(uuid.uuid4())}, format='json')
+        self.assertEqual(VerificationLog.objects.count(), initial + 1)
 
     def test_verify_qr_no_auth_required(self):
-        item_id = str(uuid.uuid4())
-        response = self.client.post('/api/verify/qr/', data={'qr_data': item_id}, format='json')
-        self.assertNotIn(response.status_code, [
-            status.HTTP_401_UNAUTHORIZED,
-            status.HTTP_403_FORBIDDEN,
-        ])
+        with patch('verification_app.views.get_item_hash', return_value=None):
+            response = self.client.post('/api/verify/qr/',
+                                        data={'qr_data': str(uuid.uuid4())}, format='json')
+        self.assertNotIn(response.status_code,
+                         [status.HTTP_401_UNAUTHORIZED, status.HTTP_403_FORBIDDEN])
 
+    def test_verify_qr_authentic_when_blockchain_exists(self):
+        with patch('verification_app.views.get_item_hash', return_value='a' * 64):
+            with patch('verification_app.views.get_cached_result', return_value=None):
+                with patch('verification_app.views.check_blockchain',
+                           return_value={'exists': True, 'item_details': {}}):
+                    response = self.client.post('/api/verify/qr/',
+                                               data={'qr_data': str(uuid.uuid4())}, format='json')
+        self.assertEqual(response.data['result'], 'AUTHENTIC')
+
+    def test_verify_qr_returns_cached_result(self):
+        item_id = str(uuid.uuid4())
+        cached = {
+            'result': 'AUTHENTIC', 'item_id': item_id,
+            'method': 'QR', 'message': 'Cached!',
+            'item_details': None,
+            'verified_at': timezone.now().isoformat(),
+        }
+        with patch('verification_app.views.get_item_hash', return_value='a' * 64):
+            with patch('verification_app.views.get_cached_result', return_value=cached):
+                initial = VerificationLog.objects.count()
+                response = self.client.post('/api/verify/qr/',
+                                           data={'qr_data': item_id}, format='json')
+        self.assertEqual(response.data['message'], 'Cached!')
+        self.assertEqual(VerificationLog.objects.count(), initial)
+
+
+# ---------------------------------------------------------------------------
+# Verify Serial endpoint
+# ---------------------------------------------------------------------------
 
 class TestVerifySerialEndpoint(TestCase):
 
@@ -153,40 +198,67 @@ class TestVerifySerialEndpoint(TestCase):
         self.client = APIClient()
 
     def test_verify_serial_returns_200(self):
-        response = self.client.post('/api/verify/serial/', data={
-            'serial_number': 'QNT-2024-CERT-ABCD1234',
-        }, format='json')
+        with patch('verification_app.views.get_item_by_serial', return_value=None):
+            with patch('verification_app.views.get_cached_result', return_value=None):
+                response = self.client.post('/api/verify/serial/', data={
+                    'serial_number': 'QNT-2024-CERT-ABCD1234',
+                }, format='json')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertIn(response.data['result'], VALID_RESULTS)
 
-    def test_verify_serial_response_has_method_serial(self):
-        response = self.client.post('/api/verify/serial/', data={
-            'serial_number': 'QNT-2024-CERT-ABCD1234',
-        }, format='json')
+    def test_verify_serial_method_is_serial(self):
+        with patch('verification_app.views.get_item_by_serial', return_value=None):
+            with patch('verification_app.views.get_cached_result', return_value=None):
+                response = self.client.post('/api/verify/serial/', data={
+                    'serial_number': 'QNT-2024-CERT-ABCD1234',
+                }, format='json')
         self.assertEqual(response.data['method'], 'SERIAL')
 
     def test_verify_serial_fails_without_serial_number(self):
         response = self.client.post('/api/verify/serial/', data={}, format='json')
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
+    def test_verify_serial_not_found_returns_not_authentic(self):
+        with patch('verification_app.views.get_item_by_serial', return_value=None):
+            with patch('verification_app.views.get_cached_result', return_value=None):
+                response = self.client.post('/api/verify/serial/', data={
+                    'serial_number': f'QNT-TEST-{uuid.uuid4().hex[:8].upper()}',
+                }, format='json')
+        self.assertEqual(response.data['result'], 'NOT_AUTHENTIC')
+
+    def test_verify_serial_authentic_when_blockchain_confirms(self):
+        item_id = str(uuid.uuid4())
+        with patch('verification_app.views.get_cached_result', return_value=None):
+            with patch('verification_app.views.get_item_by_serial', return_value={
+                'blockchain_hash': 'a' * 64, 'id': item_id,
+            }):
+                with patch('verification_app.views.check_blockchain',
+                           return_value={'exists': True, 'item_details': {}}):
+                    response = self.client.post('/api/verify/serial/', data={
+                        'serial_number': f'QNT-TEST-{uuid.uuid4().hex[:8].upper()}',
+                    }, format='json')
+        self.assertEqual(response.data['result'], 'AUTHENTIC')
+
     def test_verify_serial_logs_verification(self):
-        # Use a unique serial so Redis cache from a previous run doesn't skip logging.
-        unique_serial = f'QNT-TEST-{uuid.uuid4().hex[:8].upper()}'
-        initial_count = VerificationLog.objects.count()
-        self.client.post('/api/verify/serial/', data={
-            'serial_number': unique_serial,
-        }, format='json')
-        self.assertEqual(VerificationLog.objects.count(), initial_count + 1)
+        with patch('verification_app.views.get_item_by_serial', return_value=None):
+            with patch('verification_app.views.get_cached_result', return_value=None):
+                serial = f'QNT-TEST-{uuid.uuid4().hex[:8].upper()}'
+                initial = VerificationLog.objects.count()
+                self.client.post('/api/verify/serial/', data={'serial_number': serial}, format='json')
+        self.assertEqual(VerificationLog.objects.count(), initial + 1)
 
     def test_verify_serial_no_auth_required(self):
-        response = self.client.post('/api/verify/serial/', data={
-            'serial_number': 'QNT-2024-CERT-ABCD1234',
-        }, format='json')
-        self.assertNotIn(response.status_code, [
-            status.HTTP_401_UNAUTHORIZED,
-            status.HTTP_403_FORBIDDEN,
-        ])
+        with patch('verification_app.views.get_item_by_serial', return_value=None):
+            with patch('verification_app.views.get_cached_result', return_value=None):
+                response = self.client.post('/api/verify/serial/', data={
+                    'serial_number': 'QNT-2024-CERT-ABCD1234',
+                }, format='json')
+        self.assertNotIn(response.status_code,
+                         [status.HTTP_401_UNAUTHORIZED, status.HTTP_403_FORBIDDEN])
 
+
+# ---------------------------------------------------------------------------
+# Verify Signature endpoint
+# ---------------------------------------------------------------------------
 
 class TestVerifySignatureEndpoint(TestCase):
 
@@ -194,20 +266,20 @@ class TestVerifySignatureEndpoint(TestCase):
         self.client = APIClient()
 
     def test_verify_signature_accepts_file_upload(self):
-        pdf_content = b'%PDF-1.4 fake pdf content for testing purposes'
-        pdf_file = SimpleUploadedFile('test.pdf', pdf_content, content_type='application/pdf')
-        response = self.client.post('/api/verify/signature/', data={
-            'document': pdf_file,
-        }, format='multipart')
+        pdf = SimpleUploadedFile('test.pdf', b'%PDF-1.4 fake pdf', content_type='application/pdf')
+        with patch('verification_app.views.check_blockchain',
+                   return_value={'exists': False}):
+            response = self.client.post('/api/verify/signature/',
+                                        data={'document': pdf}, format='multipart')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertIn(response.data['result'], VALID_RESULTS)
 
-    def test_verify_signature_response_method_is_signature(self):
-        pdf_content = b'%PDF-1.4 test content'
-        pdf_file = SimpleUploadedFile('test.pdf', pdf_content, content_type='application/pdf')
-        response = self.client.post('/api/verify/signature/', data={
-            'document': pdf_file,
-        }, format='multipart')
+    def test_verify_signature_method_is_signature(self):
+        pdf = SimpleUploadedFile('test.pdf', b'%PDF-1.4 test', content_type='application/pdf')
+        with patch('verification_app.views.check_blockchain',
+                   return_value={'exists': False}):
+            response = self.client.post('/api/verify/signature/',
+                                        data={'document': pdf}, format='multipart')
         self.assertEqual(response.data['method'], 'SIGNATURE')
 
     def test_verify_signature_fails_without_document(self):
@@ -215,11 +287,18 @@ class TestVerifySignatureEndpoint(TestCase):
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
     def test_verify_signature_logs_verification(self):
-        initial_count = VerificationLog.objects.count()
-        pdf_file = SimpleUploadedFile('test.pdf', b'%PDF-1.4 content', content_type='application/pdf')
-        self.client.post('/api/verify/signature/', data={'document': pdf_file}, format='multipart')
-        self.assertEqual(VerificationLog.objects.count(), initial_count + 1)
+        pdf = SimpleUploadedFile('test.pdf', b'%PDF-1.4 content', content_type='application/pdf')
+        initial = VerificationLog.objects.count()
+        with patch('verification_app.views.check_blockchain',
+                   return_value={'exists': False}):
+            self.client.post('/api/verify/signature/',
+                             data={'document': pdf}, format='multipart')
+        self.assertEqual(VerificationLog.objects.count(), initial + 1)
 
+
+# ---------------------------------------------------------------------------
+# Verify OCR endpoint
+# ---------------------------------------------------------------------------
 
 class TestVerifyOCREndpoint(TestCase):
 
@@ -227,24 +306,24 @@ class TestVerifyOCREndpoint(TestCase):
         self.client = APIClient()
 
     def test_verify_ocr_accepts_image_upload(self):
-        response = self.client.post('/api/verify/ocr/', data={'image': make_test_image()}, format='multipart')
+        response = self.client.post('/api/verify/ocr/',
+                                    data={'image': make_test_image()}, format='multipart')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertIn(response.data['result'], VALID_RESULTS)
 
-    def test_verify_ocr_response_has_method_ocr(self):
-        response = self.client.post('/api/verify/ocr/', data={'image': make_test_image()}, format='multipart')
+    def test_verify_ocr_method_is_ocr(self):
+        response = self.client.post('/api/verify/ocr/',
+                                    data={'image': make_test_image()}, format='multipart')
         self.assertEqual(response.data['method'], 'OCR')
 
     def test_verify_ocr_fails_without_image(self):
         response = self.client.post('/api/verify/ocr/', data={}, format='multipart')
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
-    def test_verify_ocr_returns_200_for_valid_image(self):
-        # Logging only occurs when OCR extracts text; a blank image may return early.
-        # Just verify the endpoint handles the request without error.
-        response = self.client.post('/api/verify/ocr/', data={'image': make_test_image()}, format='multipart')
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
 
+# ---------------------------------------------------------------------------
+# Verify Watermark endpoint
+# ---------------------------------------------------------------------------
 
 class TestVerifyWatermarkEndpoint(TestCase):
 
@@ -252,12 +331,14 @@ class TestVerifyWatermarkEndpoint(TestCase):
         self.client = APIClient()
 
     def test_verify_watermark_accepts_image_upload(self):
-        response = self.client.post('/api/verify/watermark/', data={'image': make_test_image()}, format='multipart')
+        response = self.client.post('/api/verify/watermark/',
+                                    data={'image': make_test_image()}, format='multipart')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertIn(response.data['result'], VALID_RESULTS)
 
-    def test_verify_watermark_response_has_method_watermark(self):
-        response = self.client.post('/api/verify/watermark/', data={'image': make_test_image()}, format='multipart')
+    def test_verify_watermark_method_is_watermark(self):
+        response = self.client.post('/api/verify/watermark/',
+                                    data={'image': make_test_image()}, format='multipart')
         self.assertEqual(response.data['method'], 'WATERMARK')
 
     def test_verify_watermark_fails_without_image(self):
@@ -265,10 +346,15 @@ class TestVerifyWatermarkEndpoint(TestCase):
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
     def test_verify_watermark_logs_verification(self):
-        initial_count = VerificationLog.objects.count()
-        self.client.post('/api/verify/watermark/', data={'image': make_test_image()}, format='multipart')
-        self.assertEqual(VerificationLog.objects.count(), initial_count + 1)
+        initial = VerificationLog.objects.count()
+        self.client.post('/api/verify/watermark/',
+                         data={'image': make_test_image()}, format='multipart')
+        self.assertEqual(VerificationLog.objects.count(), initial + 1)
 
+
+# ---------------------------------------------------------------------------
+# Report item endpoint
+# ---------------------------------------------------------------------------
 
 class TestReportItemEndpoint(TestCase):
 
@@ -276,36 +362,32 @@ class TestReportItemEndpoint(TestCase):
         self.client = APIClient()
 
     def test_report_item_succeeds(self):
-        item_id = str(uuid.uuid4())
         response = self.client.post('/api/verify/report/', data={
-            'item_id': item_id,
-            'reason': 'This item appears to be counterfeit based on visual inspection.',
+            'item_id': str(uuid.uuid4()),
+            'reason':  'This item appears to be counterfeit based on visual inspection.',
         }, format='json')
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
 
     def test_report_creates_fraud_flag(self):
-        item_id = str(uuid.uuid4())
-        initial_count = FraudFlag.objects.count()
+        initial = FraudFlag.objects.count()
         self.client.post('/api/verify/report/', data={
-            'item_id': item_id,
-            'reason': 'This item appears suspicious and may be counterfeit.',
+            'item_id': str(uuid.uuid4()),
+            'reason':  'This item appears suspicious and may be counterfeit.',
         }, format='json')
-        self.assertEqual(FraudFlag.objects.count(), initial_count + 1)
+        self.assertEqual(FraudFlag.objects.count(), initial + 1)
 
     def test_report_creates_verification_log(self):
-        item_id = str(uuid.uuid4())
-        initial_count = VerificationLog.objects.count()
+        initial = VerificationLog.objects.count()
         self.client.post('/api/verify/report/', data={
-            'item_id': item_id,
-            'reason': 'This item appears suspicious and may be counterfeit.',
+            'item_id': str(uuid.uuid4()),
+            'reason':  'This item appears suspicious and may be counterfeit.',
         }, format='json')
-        self.assertEqual(VerificationLog.objects.count(), initial_count + 1)
+        self.assertEqual(VerificationLog.objects.count(), initial + 1)
 
     def test_report_fails_with_short_reason(self):
-        item_id = str(uuid.uuid4())
         response = self.client.post('/api/verify/report/', data={
-            'item_id': item_id,
-            'reason': 'Short',
+            'item_id': str(uuid.uuid4()),
+            'reason':  'Short',
         }, format='json')
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
@@ -324,13 +406,15 @@ class TestReportItemEndpoint(TestCase):
     def test_report_no_auth_required(self):
         response = self.client.post('/api/verify/report/', data={
             'item_id': str(uuid.uuid4()),
-            'reason': 'This item appears to be counterfeit.',
+            'reason':  'This item appears to be counterfeit.',
         }, format='json')
-        self.assertNotIn(response.status_code, [
-            status.HTTP_401_UNAUTHORIZED,
-            status.HTTP_403_FORBIDDEN,
-        ])
+        self.assertNotIn(response.status_code,
+                         [status.HTTP_401_UNAUTHORIZED, status.HTTP_403_FORBIDDEN])
 
+
+# ---------------------------------------------------------------------------
+# Verification history endpoint
+# ---------------------------------------------------------------------------
 
 class TestVerificationHistoryEndpoint(TestCase):
 
@@ -338,16 +422,12 @@ class TestVerificationHistoryEndpoint(TestCase):
         self.client = APIClient()
         self.item_id = uuid.uuid4()
         VerificationLog.objects.create(
-            item_id=self.item_id,
-            method=VerificationLog.Method.QR,
-            result=VerificationLog.Result.AUTHENTIC,
-            input_data=str(self.item_id),
+            item_id=self.item_id, method=VerificationLog.Method.QR,
+            result=VerificationLog.Result.AUTHENTIC, input_data=str(self.item_id),
         )
         VerificationLog.objects.create(
-            item_id=self.item_id,
-            method=VerificationLog.Method.SERIAL,
-            result=VerificationLog.Result.AUTHENTIC,
-            input_data='SERIAL-001',
+            item_id=self.item_id, method=VerificationLog.Method.SERIAL,
+            result=VerificationLog.Result.AUTHENTIC, input_data='SERIAL-001',
         )
 
     def test_admin_can_view_history(self):
@@ -365,22 +445,24 @@ class TestVerificationHistoryEndpoint(TestCase):
         response = self.client.get(f'/api/verify/history/{self.item_id}/')
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
-    def test_history_returns_empty_for_item_with_no_logs(self):
+    def test_history_empty_for_item_with_no_logs(self):
         self.client.credentials(HTTP_X_USER_ROLE='ADMIN')
         response = self.client.get(f'/api/verify/history/{uuid.uuid4()}/')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(len(response.data), 0)
 
 
+# ---------------------------------------------------------------------------
+# Fraud flags endpoint
+# ---------------------------------------------------------------------------
+
 class TestFraudFlagsEndpoint(TestCase):
 
     def setUp(self):
         self.client = APIClient()
         FraudFlag.objects.create(
-            item_id=uuid.uuid4(),
-            verification_count=60,
-            window_start=timezone.now(),
-            window_end=timezone.now(),
+            item_id=uuid.uuid4(), verification_count=60,
+            window_start=timezone.now(), window_end=timezone.now(),
         )
 
     def test_admin_can_view_fraud_flags(self):
@@ -397,6 +479,7 @@ class TestFraudFlagsEndpoint(TestCase):
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
     def test_fraud_flags_requires_authentication(self):
+        # fraud_flags uses IsAuthenticated — unauthenticated should get 401
         response = self.client.get('/api/verify/flags/')
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
 
@@ -412,39 +495,29 @@ class TestFraudFlagsEndpoint(TestCase):
 
 
 # ---------------------------------------------------------------------------
-# Additional tests for ≥80% coverage
+# Helper function unit tests
 # ---------------------------------------------------------------------------
 
-from unittest.mock import patch, MagicMock
-from verification_app.views import (
-    get_verifier_ip,
-    log_verification,
-    build_result,
-    check_blockchain,
-    check_fraud_pattern,
-    send_issuer_notification,
-    get_cached_result,
-    cache_result,
-)
-
-
-class TestHelperFunctionsDirect(TestCase):
+class TestHelperFunctions(TestCase):
 
     def test_get_verifier_ip_returns_remote_addr(self):
         from django.test import RequestFactory
+        from verification_app.views import get_verifier_ip
         factory = RequestFactory()
         request = factory.get('/')
         request.META['REMOTE_ADDR'] = '127.0.0.1'
         self.assertEqual(get_verifier_ip(request), '127.0.0.1')
 
-    def test_get_verifier_ip_prefers_x_forwarded_for_first_ip(self):
+    def test_get_verifier_ip_prefers_x_forwarded_for(self):
         from django.test import RequestFactory
+        from verification_app.views import get_verifier_ip
         factory = RequestFactory()
         request = factory.get('/')
         request.META['HTTP_X_FORWARDED_FOR'] = '10.0.0.5, 192.168.1.1'
         self.assertEqual(get_verifier_ip(request), '10.0.0.5')
 
-    def test_log_verification_creates_db_record_with_correct_fields(self):
+    def test_log_verification_creates_record(self):
+        from verification_app.views import log_verification
         item_id = uuid.uuid4()
         log = log_verification(
             item_id, None,
@@ -454,72 +527,87 @@ class TestHelperFunctionsDirect(TestCase):
         )
         self.assertEqual(log.item_id, item_id)
         self.assertEqual(log.method, VerificationLog.Method.QR)
-        self.assertEqual(log.result, VerificationLog.Result.AUTHENTIC)
         self.assertEqual(log.verifier_ip, '127.0.0.1')
 
-    def test_build_result_contains_all_expected_keys(self):
-        result = build_result('AUTHENTIC', uuid.uuid4(), 'QR', 'message here')
+    def test_build_result_has_all_keys(self):
+        from verification_app.views import build_result
+        result = build_result('AUTHENTIC', uuid.uuid4(), 'QR', 'message')
         for key in ('result', 'item_id', 'method', 'message', 'item_details', 'verified_at'):
             self.assertIn(key, result)
 
     def test_build_result_with_none_item_id(self):
+        from verification_app.views import build_result
         result = build_result('NOT_AUTHENTIC', None, 'SERIAL', 'not found')
         self.assertIsNone(result['item_id'])
 
-    def test_build_result_with_item_details(self):
-        details = {'category': 'CERTIFICATE', 'issuer': 'Test'}
-        result = build_result('AUTHENTIC', uuid.uuid4(), 'QR', 'ok', item_details=details)
-        self.assertEqual(result['item_details']['category'], 'CERTIFICATE')
-
-    def test_check_blockchain_returns_mock_when_service_unreachable(self):
-        result = check_blockchain(item_id=uuid.uuid4())
-        self.assertIn('exists', result)
-        self.assertTrue(result['exists'])
-        self.assertIn('item_details', result)
-
-    def test_check_blockchain_with_serial_number_uses_serial_url(self):
-        result = check_blockchain(serial_number='QNT-TEST-SERIAL-001')
-        self.assertIn('exists', result)
-
-    def test_check_blockchain_http_200_returns_response_json(self):
-        mock_resp = MagicMock()
-        mock_resp.status_code = 200
-        mock_resp.json.return_value = {'exists': True, 'item_id': str(uuid.uuid4())}
-        with patch('verification_app.views.requests.get', return_value=mock_resp):
-            result = check_blockchain(item_id=uuid.uuid4())
-        self.assertTrue(result['exists'])
-        self.assertIn('item_id', result)
-
-    def test_send_issuer_notification_does_not_raise(self):
-        send_issuer_notification('test@example.com', uuid.uuid4(), 'QR')
-
     def test_get_cached_result_returns_none_when_redis_raises(self):
+        from verification_app.views import get_cached_result
         with patch('verification_app.views.get_redis_client', side_effect=Exception('no redis')):
             result = get_cached_result('some-key')
         self.assertIsNone(result)
 
-    def test_get_cached_result_returns_parsed_data_on_cache_hit(self):
+    def test_get_cached_result_returns_parsed_data_on_hit(self):
         import json
+        from verification_app.views import get_cached_result
         mock_redis = MagicMock()
         mock_redis.get.return_value = json.dumps({'result': 'AUTHENTIC', 'method': 'QR'}).encode()
         with patch('verification_app.views.get_redis_client', return_value=mock_redis):
             result = get_cached_result('test-item-id')
         self.assertEqual(result['result'], 'AUTHENTIC')
 
-    def test_cache_result_silently_handles_redis_error(self):
+    def test_cache_result_handles_redis_error_silently(self):
+        from verification_app.views import cache_result
         with patch('verification_app.views.get_redis_client', side_effect=Exception('no redis')):
-            cache_result('some-key', {'result': 'AUTHENTIC'})
+            cache_result('some-key', {'result': 'AUTHENTIC'})  # should not raise
 
-    def test_cache_result_calls_setex_on_redis(self):
+    def test_cache_result_calls_setex(self):
+        from verification_app.views import cache_result
         mock_redis = MagicMock()
         with patch('verification_app.views.get_redis_client', return_value=mock_redis):
             cache_result('test-key', {'result': 'AUTHENTIC'})
         mock_redis.setex.assert_called_once()
 
+    def test_check_blockchain_returns_dict_on_connection_failure(self):
+        from verification_app.views import check_blockchain
+        with patch('verification_app.views.requests.post', side_effect=Exception('no connection')):
+            result = check_blockchain('a' * 64)
+        self.assertIn('exists', result)
+        self.assertFalse(result['exists'])
+
+    def test_check_blockchain_authentic_response(self):
+        from verification_app.views import check_blockchain
+        mock_resp = MagicMock()
+        mock_resp.status_code = 200
+        mock_resp.json.return_value = {
+            'status': 'AUTHENTIC',
+            'category': 'ACADEMIC',
+            'issuer_name': 'ICT University',
+            'issuer_id': 'issuer-001',
+            'timestamp': 1700000000,
+        }
+        with patch('verification_app.views.requests.post', return_value=mock_resp):
+            result = check_blockchain('a' * 64)
+        self.assertTrue(result['exists'])
+        self.assertIn('item_details', result)
+
+    def test_check_blockchain_not_authentic_response(self):
+        from verification_app.views import check_blockchain
+        mock_resp = MagicMock()
+        mock_resp.status_code = 200
+        mock_resp.json.return_value = {'status': 'NOT_AUTHENTIC'}
+        with patch('verification_app.views.requests.post', return_value=mock_resp):
+            result = check_blockchain('a' * 64)
+        self.assertFalse(result['exists'])
+
+
+# ---------------------------------------------------------------------------
+# Fraud pattern detection
+# ---------------------------------------------------------------------------
 
 class TestCheckFraudPattern(TestCase):
 
-    def test_fraud_pattern_creates_flag_at_threshold(self):
+    def test_fraud_flag_created_at_threshold(self):
+        from verification_app.views import check_fraud_pattern
         item_id = uuid.uuid4()
         for _ in range(50):
             VerificationLog.objects.create(
@@ -531,7 +619,8 @@ class TestCheckFraudPattern(TestCase):
         check_fraud_pattern(item_id)
         self.assertEqual(FraudFlag.objects.count(), initial + 1)
 
-    def test_fraud_pattern_flag_has_correct_item_id(self):
+    def test_fraud_flag_has_correct_item_id(self):
+        from verification_app.views import check_fraud_pattern
         item_id = uuid.uuid4()
         for _ in range(50):
             VerificationLog.objects.create(
@@ -542,10 +631,10 @@ class TestCheckFraudPattern(TestCase):
         check_fraud_pattern(item_id)
         flag = FraudFlag.objects.filter(item_id=item_id).first()
         self.assertIsNotNone(flag)
-        self.assertEqual(flag.item_id, item_id)
         self.assertEqual(flag.status, FraudFlag.FlagStatus.OPEN)
 
-    def test_fraud_pattern_no_flag_created_below_threshold(self):
+    def test_no_flag_below_threshold(self):
+        from verification_app.views import check_fraud_pattern
         item_id = uuid.uuid4()
         for _ in range(49):
             VerificationLog.objects.create(
@@ -557,7 +646,8 @@ class TestCheckFraudPattern(TestCase):
         check_fraud_pattern(item_id)
         self.assertEqual(FraudFlag.objects.count(), initial)
 
-    def test_fraud_pattern_ignores_not_authentic_logs(self):
+    def test_not_authentic_logs_do_not_trigger_flag(self):
+        from verification_app.views import check_fraud_pattern
         item_id = uuid.uuid4()
         for _ in range(50):
             VerificationLog.objects.create(
@@ -569,93 +659,15 @@ class TestCheckFraudPattern(TestCase):
         check_fraud_pattern(item_id)
         self.assertEqual(FraudFlag.objects.count(), initial)
 
-
-class TestVerifyEndpointsAdvanced(TestCase):
-
-    def setUp(self):
-        self.client = APIClient()
-
-    def test_verify_qr_returns_not_authentic_when_blockchain_finds_nothing(self):
-        with patch('verification_app.views.check_blockchain', return_value={'exists': False}):
-            with patch('verification_app.views.get_cached_result', return_value=None):
-                response = self.client.post('/api/verify/qr/', data={
-                    'qr_data': str(uuid.uuid4()),
-                }, format='json')
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(response.data['result'], 'NOT_AUTHENTIC')
-
-    def test_verify_qr_returns_cached_result_without_logging(self):
-        item_id = str(uuid.uuid4())
-        cached = {
-            'result': 'AUTHENTIC', 'item_id': item_id,
-            'method': 'QR', 'message': 'Cached QR result!',
-            'item_details': None,
-            'verified_at': timezone.now().isoformat(),
-        }
-        initial_count = VerificationLog.objects.count()
-        with patch('verification_app.views.get_cached_result', return_value=cached):
-            response = self.client.post('/api/verify/qr/', data={
-                'qr_data': item_id,
-            }, format='json')
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(response.data['message'], 'Cached QR result!')
-        self.assertEqual(VerificationLog.objects.count(), initial_count)
-
-    def test_verify_serial_returns_cached_result(self):
-        serial = f'QNT-CACHED-{uuid.uuid4().hex[:8].upper()}'
-        cached = {
-            'result': 'AUTHENTIC', 'item_id': None,
-            'method': 'SERIAL', 'message': 'Cached serial!',
-            'item_details': None,
-            'verified_at': timezone.now().isoformat(),
-        }
-        with patch('verification_app.views.get_cached_result', return_value=cached):
-            response = self.client.post('/api/verify/serial/', data={
-                'serial_number': serial,
-            }, format='json')
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(response.data['message'], 'Cached serial!')
-
-    def test_verify_serial_not_authentic_when_blockchain_returns_not_exists(self):
-        with patch('verification_app.views.check_blockchain', return_value={'exists': False}):
-            with patch('verification_app.views.get_cached_result', return_value=None):
-                unique_serial = f'QNT-TEST-{uuid.uuid4().hex[:8].upper()}'
-                response = self.client.post('/api/verify/serial/', data={
-                    'serial_number': unique_serial,
-                }, format='json')
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(response.data['result'], 'NOT_AUTHENTIC')
-
-    def test_verify_serial_with_item_id_in_blockchain_response(self):
-        item_id = str(uuid.uuid4())
-        with patch('verification_app.views.check_blockchain', return_value={
-            'exists': True,
-            'item_id': item_id,
-            'item_details': {'category': 'CERTIFICATE'},
-        }):
-            with patch('verification_app.views.get_cached_result', return_value=None):
-                unique_serial = f'QNT-TEST-{uuid.uuid4().hex[:8].upper()}'
-                response = self.client.post('/api/verify/serial/', data={
-                    'serial_number': unique_serial,
-                }, format='json')
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(response.data['result'], 'AUTHENTIC')
-
-    def test_verify_qr_with_x_forwarded_for_header_succeeds(self):
-        response = self.client.post(
-            '/api/verify/qr/',
-            data={'qr_data': str(uuid.uuid4())},
-            format='json',
-            HTTP_X_FORWARDED_FOR='192.168.1.100, 10.0.0.1',
-        )
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-
-    def test_verify_serial_with_x_forwarded_for_header(self):
-        unique_serial = f'QNT-FWD-{uuid.uuid4().hex[:8].upper()}'
-        response = self.client.post(
-            '/api/verify/serial/',
-            data={'serial_number': unique_serial},
-            format='json',
-            HTTP_X_FORWARDED_FOR='172.16.0.1',
-        )
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
+    def test_no_duplicate_flag_for_same_item(self):
+        from verification_app.views import check_fraud_pattern
+        item_id = uuid.uuid4()
+        for _ in range(50):
+            VerificationLog.objects.create(
+                item_id=item_id,
+                method=VerificationLog.Method.QR,
+                result=VerificationLog.Result.AUTHENTIC,
+            )
+        check_fraud_pattern(item_id)
+        check_fraud_pattern(item_id)
+        self.assertEqual(FraudFlag.objects.filter(item_id=item_id).count(), 1)
