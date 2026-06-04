@@ -229,21 +229,22 @@ class TestRegisterItemEndpoint(TestCase):
         mock_verify.return_value = make_issuer(self.issuer_id)
         self.client.credentials(HTTP_AUTHORIZATION='Bearer faketoken')
         response = self.client.post('/api/items/register/', data={
-            'category': 'DOCUMENT',
-            'institution_id': self.institution_id,
-            'document_type': 'Passport',
-            'owner_name': 'Jane Smith',
-            'owner_surname': 'Smith',
-            'owner_given_names': 'Jane',
-            'issuing_authority': 'Ministry of External Relations',
-            'reference_number': 'REF001',
-            'card_number': 'CNI123456',
-            'location': 'Yaounde',
-            'issue_date': '2024-01-15',
-            'date_of_birth': '1990-05-20',
-            'date_of_expiry': '2029-01-15',
-            'sex': 'F',
-            'place_of_birth': 'Douala',
+        'category': 'DOCUMENT',
+        'institution_id': self.institution_id,
+        'document_type': 'Passport',
+        'owner_name': 'Jane Smith',
+        'owner_surname': 'Smith',
+        'owner_given_names': 'Jane',
+        'issuing_authority': 'Ministry of External Relations',
+        'reference_number': 'REF001',
+        'card_number': 'CNI123456',
+        'location': 'Yaounde',
+        'issue_date': '2024-01-15',
+        'date_of_birth': '1990-05-20',
+        'date_of_expiry': '2029-01-15',
+        'sex': 'F',
+        'place_of_birth': 'Douala',
+        'fingerprint_hash': 'abc123fingerprinthash',
         }, format='json')
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertEqual(response.data['item']['category'], 'DOCUMENT')
