@@ -233,10 +233,17 @@ class TestRegisterItemEndpoint(TestCase):
             'institution_id': self.institution_id,
             'document_type': 'Passport',
             'owner_name': 'Jane Smith',
+            'owner_surname': 'Smith',
+            'owner_given_names': 'Jane',
             'issuing_authority': 'Ministry of External Relations',
             'reference_number': 'REF001',
+            'card_number': 'CNI123456',
             'location': 'Yaounde',
             'issue_date': '2024-01-15',
+            'date_of_birth': '1990-05-20',
+            'date_of_expiry': '2029-01-15',
+            'sex': 'F',
+            'place_of_birth': 'Douala',
         }, format='json')
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertEqual(response.data['item']['category'], 'DOCUMENT')
@@ -517,9 +524,10 @@ class TestAllItemsEndpoint(TestCase):
     def test_admin_can_filter_by_category_and_status(self, mock_verify):
         mock_verify.return_value = make_admin()
         self.client.credentials(HTTP_AUTHORIZATION='Bearer faketoken')
+        # setUp has 2 CERTIFICATEs: one PENDING, one REVOKED — so PENDING = 1
         response = self.client.get('/api/items/all/?category=CERTIFICATE&status=PENDING')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(len(response.data), 2)
+        self.assertEqual(len(response.data), 1)
 
 
 class TestPendingItemsEndpoint(TestCase):
