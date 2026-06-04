@@ -92,6 +92,10 @@ pipeline {
 
                             echo '--- Reloading Nginx ---'
                             sudo nginx -t && sudo systemctl reload nginx
+                            
+                            echo '--- Updating frontend ---'
+                            sudo cp -r ${APP_DIR}/frontend/* /var/www/qentis/
+                            sudo chown -R www-data:www-data /var/www/qentis/
 
                             echo '--- Services status ---'
                             docker compose ps
