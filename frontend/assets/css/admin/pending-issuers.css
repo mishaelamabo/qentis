@@ -101,6 +101,7 @@ h1, h2, h3, h4, h5, h6 { font-weight: 600; color: var(--q-text); }
   border-radius: var(--q-radius);
   padding: 24px;
   box-shadow: var(--q-shadow);
+  overflow-x: auto;
 }
 
 /* ── Buttons ── */
