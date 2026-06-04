@@ -8,6 +8,8 @@
 </head>
 <body data-role="ADMIN" data-sidebar="admin" data-page="pending-issuers">
 
+<div id="sidebar-overlay"></div>
+
 <script src="../../assets/js/api/config.js"></script>
 <script src="../../assets/js/api/auth.js"></script>
 <script src="../../assets/js/api/institution.js"></script>
@@ -19,7 +21,7 @@
     <h1>Pending Issuers</h1>
     <p>Review and approve institution applications</p>
   </div>
-  <div id="alert"></div>
+  <div id="alert" class="q-alert"></div>
   <div class="q-card">
     <div id="pending-list"><p class="q-loading">Loading...</p></div>
   </div>
