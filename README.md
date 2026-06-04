@@ -228,4 +228,4 @@ backend/
 
 ---
 
-*Qentis © 2026 · ICT University Cameroon · SEN3244 Software Architecture*
+*Qentis © 2026 · ICT University Cameroon · SEN3244 Software Architecture*# test auto deploy
