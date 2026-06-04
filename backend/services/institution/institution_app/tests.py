@@ -1,18 +1,17 @@
 import uuid
+from unittest.mock import patch
 from django.test import TestCase
 from rest_framework.test import APIClient
 from rest_framework import status
 from institution_app.models import Institution, InstitutionDocument
 
 
-class MockUser:
-    """Minimal user for bypassing JWT. The institution service reads role and
-    user identity from HTTP_X_USER_ID / HTTP_X_USER_ROLE headers, not from
-    request.user, so any object with is_authenticated=True works."""
-    is_authenticated = True
+def make_issuer_user(user_id=None):
+    return {'user_id': str(user_id or uuid.uuid4()), 'role': 'ISSUER', 'valid': True}
 
-    def __init__(self):
-        self.id = uuid.uuid4()
+
+def make_admin_user(user_id=None):
+    return {'user_id': str(user_id or uuid.uuid4()), 'role': 'ADMIN', 'valid': True}
 
 
 # ---------------------------------------------------------------------------
@@ -123,70 +122,73 @@ class TestApplyEndpoint(TestCase):
             'contact_email': 'admin@ict.cm',
         }
 
-    def test_apply_succeeds_with_valid_data(self):
-        self.client.force_authenticate(user=MockUser())
-        self.client.credentials(HTTP_X_USER_ID=self.user_id, HTTP_X_USER_ROLE='ISSUER')
+    @patch('institution_app.auth_helper.verify_token')
+    def test_apply_succeeds_with_valid_data(self, mock_verify):
+        mock_verify.return_value = make_issuer_user(self.user_id)
+        self.client.credentials(HTTP_AUTHORIZATION='Bearer faketoken')
         response = self.client.post('/api/institution/apply/', data=self.valid_data, format='json')
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertEqual(response.data['status'], 'PENDING')
 
-    def test_apply_returns_application_id(self):
-        self.client.force_authenticate(user=MockUser())
-        self.client.credentials(HTTP_X_USER_ID=self.user_id, HTTP_X_USER_ROLE='ISSUER')
+    @patch('institution_app.auth_helper.verify_token')
+    def test_apply_returns_application_id(self, mock_verify):
+        mock_verify.return_value = make_issuer_user(self.user_id)
+        self.client.credentials(HTTP_AUTHORIZATION='Bearer faketoken')
         response = self.client.post('/api/institution/apply/', data=self.valid_data, format='json')
         self.assertIn('application_id', response.data)
-
-    def test_apply_fails_without_user_id(self):
-        self.client.force_authenticate(user=MockUser())
-        response = self.client.post('/api/institution/apply/', data=self.valid_data, format='json')
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
     def test_apply_requires_authentication(self):
         response = self.client.post('/api/institution/apply/', data=self.valid_data, format='json')
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
 
-    def test_apply_fails_with_missing_fields(self):
-        self.client.force_authenticate(user=MockUser())
-        self.client.credentials(HTTP_X_USER_ID=self.user_id, HTTP_X_USER_ROLE='ISSUER')
+    @patch('institution_app.auth_helper.verify_token')
+    def test_apply_fails_with_missing_fields(self, mock_verify):
+        mock_verify.return_value = make_issuer_user(self.user_id)
+        self.client.credentials(HTTP_AUTHORIZATION='Bearer faketoken')
         response = self.client.post('/api/institution/apply/', data={'name': 'ICT University'}, format='json')
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
-    def test_apply_fails_with_duplicate_application(self):
-        self.client.force_authenticate(user=MockUser())
-        self.client.credentials(HTTP_X_USER_ID=self.user_id, HTTP_X_USER_ROLE='ISSUER')
+    @patch('institution_app.auth_helper.verify_token')
+    def test_apply_fails_with_duplicate_application(self, mock_verify):
+        mock_verify.return_value = make_issuer_user(self.user_id)
+        self.client.credentials(HTTP_AUTHORIZATION='Bearer faketoken')
         self.client.post('/api/institution/apply/', data=self.valid_data, format='json')
         response = self.client.post('/api/institution/apply/', data=self.valid_data, format='json')
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
-    def test_apply_fails_with_invalid_email(self):
-        self.client.force_authenticate(user=MockUser())
-        self.client.credentials(HTTP_X_USER_ID=self.user_id, HTTP_X_USER_ROLE='ISSUER')
+    @patch('institution_app.auth_helper.verify_token')
+    def test_apply_fails_with_invalid_email(self, mock_verify):
+        mock_verify.return_value = make_issuer_user(self.user_id)
+        self.client.credentials(HTTP_AUTHORIZATION='Bearer faketoken')
         data = self.valid_data.copy()
         data['contact_email'] = 'not-an-email'
         response = self.client.post('/api/institution/apply/', data=data, format='json')
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
-    def test_apply_normalises_email_to_lowercase(self):
-        self.client.force_authenticate(user=MockUser())
-        self.client.credentials(HTTP_X_USER_ID=self.user_id, HTTP_X_USER_ROLE='ISSUER')
+    @patch('institution_app.auth_helper.verify_token')
+    def test_apply_normalises_email_to_lowercase(self, mock_verify):
+        mock_verify.return_value = make_issuer_user(self.user_id)
+        self.client.credentials(HTTP_AUTHORIZATION='Bearer faketoken')
         data = self.valid_data.copy()
         data['contact_email'] = 'ADMIN@ICT.CM'
         self.client.post('/api/institution/apply/', data=data, format='json')
         self.assertTrue(Institution.objects.filter(contact_email='admin@ict.cm').exists())
 
-    def test_apply_fails_with_short_name(self):
-        self.client.force_authenticate(user=MockUser())
-        self.client.credentials(HTTP_X_USER_ID=self.user_id, HTTP_X_USER_ROLE='ISSUER')
+    @patch('institution_app.auth_helper.verify_token')
+    def test_apply_fails_with_short_name(self, mock_verify):
+        mock_verify.return_value = make_issuer_user(self.user_id)
+        self.client.credentials(HTTP_AUTHORIZATION='Bearer faketoken')
         data = self.valid_data.copy()
         data['name'] = 'AB'
         response = self.client.post('/api/institution/apply/', data=data, format='json')
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
-    def test_apply_all_institution_types_accepted(self):
+    @patch('institution_app.auth_helper.verify_token')
+    def test_apply_all_institution_types_accepted(self, mock_verify):
         for itype in ['UNIVERSITY', 'HOSPITAL', 'NOTARY', 'BANK', 'MANUFACTURER']:
             uid = str(uuid.uuid4())
-            self.client.force_authenticate(user=MockUser())
-            self.client.credentials(HTTP_X_USER_ID=uid, HTTP_X_USER_ROLE='ISSUER')
+            mock_verify.return_value = make_issuer_user(uid)
+            self.client.credentials(HTTP_AUTHORIZATION='Bearer faketoken')
             data = self.valid_data.copy()
             data['institution_type'] = itype
             data['contact_email'] = f'{itype.lower()}@test.cm'
@@ -213,27 +215,24 @@ class TestApplicationStatusEndpoint(TestCase):
             status=Institution.Status.PENDING,
         )
 
-    def test_status_returns_institution_data(self):
-        self.client.force_authenticate(user=MockUser())
-        self.client.credentials(HTTP_X_USER_ID=self.user_id, HTTP_X_USER_ROLE='ISSUER')
+    @patch('institution_app.auth_helper.verify_token')
+    def test_status_returns_institution_data(self, mock_verify):
+        mock_verify.return_value = make_issuer_user(self.user_id)
+        self.client.credentials(HTTP_AUTHORIZATION='Bearer faketoken')
         response = self.client.get('/api/institution/status/')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data['status'], 'PENDING')
 
-    def test_status_returns_404_when_no_application(self):
-        self.client.force_authenticate(user=MockUser())
-        self.client.credentials(HTTP_X_USER_ID=str(uuid.uuid4()), HTTP_X_USER_ROLE='ISSUER')
+    @patch('institution_app.auth_helper.verify_token')
+    def test_status_returns_404_when_no_application(self, mock_verify):
+        mock_verify.return_value = make_issuer_user(str(uuid.uuid4()))
+        self.client.credentials(HTTP_AUTHORIZATION='Bearer faketoken')
         response = self.client.get('/api/institution/status/')
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
 
     def test_status_requires_authentication(self):
         response = self.client.get('/api/institution/status/')
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
-
-    def test_status_fails_without_user_id_header(self):
-        self.client.force_authenticate(user=MockUser())
-        response = self.client.get('/api/institution/status/')
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
 
 # ---------------------------------------------------------------------------
@@ -264,17 +263,19 @@ class TestPendingApplicationsEndpoint(TestCase):
             status=Institution.Status.APPROVED,
         )
 
-    def test_admin_can_view_pending_applications(self):
-        self.client.force_authenticate(user=MockUser())
-        self.client.credentials(HTTP_X_USER_ID=self.admin_id, HTTP_X_USER_ROLE='ADMIN')
+    @patch('institution_app.auth_helper.verify_token')
+    def test_admin_can_view_pending_applications(self, mock_verify):
+        mock_verify.return_value = make_admin_user(self.admin_id)
+        self.client.credentials(HTTP_AUTHORIZATION='Bearer faketoken')
         response = self.client.get('/api/institution/pending/')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(len(response.data), 1)
         self.assertEqual(response.data[0]['name'], 'Pending Hospital')
 
-    def test_non_admin_cannot_view_pending(self):
-        self.client.force_authenticate(user=MockUser())
-        self.client.credentials(HTTP_X_USER_ID=str(uuid.uuid4()), HTTP_X_USER_ROLE='ISSUER')
+    @patch('institution_app.auth_helper.verify_token')
+    def test_non_admin_cannot_view_pending(self, mock_verify):
+        mock_verify.return_value = make_issuer_user()
+        self.client.credentials(HTTP_AUTHORIZATION='Bearer faketoken')
         response = self.client.get('/api/institution/pending/')
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
@@ -282,9 +283,10 @@ class TestPendingApplicationsEndpoint(TestCase):
         response = self.client.get('/api/institution/pending/')
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
 
-    def test_pending_only_returns_pending_institutions(self):
-        self.client.force_authenticate(user=MockUser())
-        self.client.credentials(HTTP_X_USER_ID=self.admin_id, HTTP_X_USER_ROLE='ADMIN')
+    @patch('institution_app.auth_helper.verify_token')
+    def test_pending_only_returns_pending_institutions(self, mock_verify):
+        mock_verify.return_value = make_admin_user(self.admin_id)
+        self.client.credentials(HTTP_AUTHORIZATION='Bearer faketoken')
         response = self.client.get('/api/institution/pending/')
         statuses = [item['status'] for item in response.data]
         self.assertTrue(all(s == 'PENDING' for s in statuses))
@@ -312,16 +314,18 @@ class TestAllInstitutionsEndpoint(TestCase):
             status=Institution.Status.APPROVED,
         )
 
-    def test_admin_can_view_all_institutions(self):
-        self.client.force_authenticate(user=MockUser())
-        self.client.credentials(HTTP_X_USER_ID=self.admin_id, HTTP_X_USER_ROLE='ADMIN')
+    @patch('institution_app.auth_helper.verify_token')
+    def test_admin_can_view_all_institutions(self, mock_verify):
+        mock_verify.return_value = make_admin_user(self.admin_id)
+        self.client.credentials(HTTP_AUTHORIZATION='Bearer faketoken')
         response = self.client.get('/api/institution/all/')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(len(response.data), 2)
 
-    def test_non_admin_cannot_view_all(self):
-        self.client.force_authenticate(user=MockUser())
-        self.client.credentials(HTTP_X_USER_ID=str(uuid.uuid4()), HTTP_X_USER_ROLE='ISSUER')
+    @patch('institution_app.auth_helper.verify_token')
+    def test_non_admin_cannot_view_all(self, mock_verify):
+        mock_verify.return_value = make_issuer_user()
+        self.client.credentials(HTTP_AUTHORIZATION='Bearer faketoken')
         response = self.client.get('/api/institution/all/')
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
@@ -349,39 +353,44 @@ class TestApproveEndpoint(TestCase):
             status=Institution.Status.PENDING,
         )
 
-    def test_admin_can_approve_institution(self):
-        self.client.force_authenticate(user=MockUser())
-        self.client.credentials(HTTP_X_USER_ID=self.admin_id, HTTP_X_USER_ROLE='ADMIN')
+    @patch('institution_app.auth_helper.verify_token')
+    def test_admin_can_approve_institution(self, mock_verify):
+        mock_verify.return_value = make_admin_user(self.admin_id)
+        self.client.credentials(HTTP_AUTHORIZATION='Bearer faketoken')
         response = self.client.put(f'/api/institution/{self.institution.id}/approve/')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.institution.refresh_from_db()
         self.assertEqual(self.institution.status, Institution.Status.APPROVED)
 
-    def test_approve_sets_approved_by_and_approved_at(self):
-        self.client.force_authenticate(user=MockUser())
-        self.client.credentials(HTTP_X_USER_ID=self.admin_id, HTTP_X_USER_ROLE='ADMIN')
+    @patch('institution_app.auth_helper.verify_token')
+    def test_approve_sets_approved_by_and_approved_at(self, mock_verify):
+        mock_verify.return_value = make_admin_user(self.admin_id)
+        self.client.credentials(HTTP_AUTHORIZATION='Bearer faketoken')
         self.client.put(f'/api/institution/{self.institution.id}/approve/')
         self.institution.refresh_from_db()
         self.assertEqual(str(self.institution.approved_by), self.admin_id)
         self.assertIsNotNone(self.institution.approved_at)
 
-    def test_non_admin_cannot_approve(self):
-        self.client.force_authenticate(user=MockUser())
-        self.client.credentials(HTTP_X_USER_ID=str(uuid.uuid4()), HTTP_X_USER_ROLE='ISSUER')
+    @patch('institution_app.auth_helper.verify_token')
+    def test_non_admin_cannot_approve(self, mock_verify):
+        mock_verify.return_value = make_issuer_user()
+        self.client.credentials(HTTP_AUTHORIZATION='Bearer faketoken')
         response = self.client.put(f'/api/institution/{self.institution.id}/approve/')
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
-    def test_cannot_approve_already_approved(self):
+    @patch('institution_app.auth_helper.verify_token')
+    def test_cannot_approve_already_approved(self, mock_verify):
+        mock_verify.return_value = make_admin_user(self.admin_id)
         self.institution.status = Institution.Status.APPROVED
         self.institution.save()
-        self.client.force_authenticate(user=MockUser())
-        self.client.credentials(HTTP_X_USER_ID=self.admin_id, HTTP_X_USER_ROLE='ADMIN')
+        self.client.credentials(HTTP_AUTHORIZATION='Bearer faketoken')
         response = self.client.put(f'/api/institution/{self.institution.id}/approve/')
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
-    def test_approve_nonexistent_institution_returns_404(self):
-        self.client.force_authenticate(user=MockUser())
-        self.client.credentials(HTTP_X_USER_ID=self.admin_id, HTTP_X_USER_ROLE='ADMIN')
+    @patch('institution_app.auth_helper.verify_token')
+    def test_approve_nonexistent_institution_returns_404(self, mock_verify):
+        mock_verify.return_value = make_admin_user(self.admin_id)
+        self.client.credentials(HTTP_AUTHORIZATION='Bearer faketoken')
         response = self.client.put(f'/api/institution/{uuid.uuid4()}/approve/')
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
 
@@ -409,9 +418,10 @@ class TestRejectEndpoint(TestCase):
             status=Institution.Status.PENDING,
         )
 
-    def test_admin_can_reject_with_reason(self):
-        self.client.force_authenticate(user=MockUser())
-        self.client.credentials(HTTP_X_USER_ID=self.admin_id, HTTP_X_USER_ROLE='ADMIN')
+    @patch('institution_app.auth_helper.verify_token')
+    def test_admin_can_reject_with_reason(self, mock_verify):
+        mock_verify.return_value = make_admin_user(self.admin_id)
+        self.client.credentials(HTTP_AUTHORIZATION='Bearer faketoken')
         response = self.client.put(
             f'/api/institution/{self.institution.id}/reject/',
             data={'reason': 'Documents are not valid'},
@@ -422,18 +432,20 @@ class TestRejectEndpoint(TestCase):
         self.assertEqual(self.institution.status, Institution.Status.REJECTED)
         self.assertEqual(self.institution.rejection_reason, 'Documents are not valid')
 
-    def test_reject_fails_without_reason(self):
-        self.client.force_authenticate(user=MockUser())
-        self.client.credentials(HTTP_X_USER_ID=self.admin_id, HTTP_X_USER_ROLE='ADMIN')
+    @patch('institution_app.auth_helper.verify_token')
+    def test_reject_fails_without_reason(self, mock_verify):
+        mock_verify.return_value = make_admin_user(self.admin_id)
+        self.client.credentials(HTTP_AUTHORIZATION='Bearer faketoken')
         response = self.client.put(
             f'/api/institution/{self.institution.id}/reject/',
             data={}, format='json',
         )
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
-    def test_non_admin_cannot_reject(self):
-        self.client.force_authenticate(user=MockUser())
-        self.client.credentials(HTTP_X_USER_ID=str(uuid.uuid4()), HTTP_X_USER_ROLE='ISSUER')
+    @patch('institution_app.auth_helper.verify_token')
+    def test_non_admin_cannot_reject(self, mock_verify):
+        mock_verify.return_value = make_issuer_user()
+        self.client.credentials(HTTP_AUTHORIZATION='Bearer faketoken')
         response = self.client.put(
             f'/api/institution/{self.institution.id}/reject/',
             data={'reason': 'Not valid'},
@@ -441,9 +453,10 @@ class TestRejectEndpoint(TestCase):
         )
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
-    def test_reject_nonexistent_institution_returns_404(self):
-        self.client.force_authenticate(user=MockUser())
-        self.client.credentials(HTTP_X_USER_ID=self.admin_id, HTTP_X_USER_ROLE='ADMIN')
+    @patch('institution_app.auth_helper.verify_token')
+    def test_reject_nonexistent_institution_returns_404(self, mock_verify):
+        mock_verify.return_value = make_admin_user(self.admin_id)
+        self.client.credentials(HTTP_AUTHORIZATION='Bearer faketoken')
         response = self.client.put(
             f'/api/institution/{uuid.uuid4()}/reject/',
             data={'reason': 'Not valid'},
@@ -479,9 +492,10 @@ class TestRevokeEndpoint(TestCase):
             status=Institution.Status.APPROVED,
         )
 
-    def test_admin_can_revoke_approved_institution(self):
-        self.client.force_authenticate(user=MockUser())
-        self.client.credentials(HTTP_X_USER_ID=self.admin_id, HTTP_X_USER_ROLE='ADMIN')
+    @patch('institution_app.auth_helper.verify_token')
+    def test_admin_can_revoke_approved_institution(self, mock_verify):
+        mock_verify.return_value = make_admin_user(self.admin_id)
+        self.client.credentials(HTTP_AUTHORIZATION='Bearer faketoken')
         response = self.client.put(
             f'/api/institution/{self.institution.id}/revoke/',
             data={'reason': 'Violated platform terms'},
@@ -491,11 +505,12 @@ class TestRevokeEndpoint(TestCase):
         self.institution.refresh_from_db()
         self.assertEqual(self.institution.status, Institution.Status.REVOKED)
 
-    def test_cannot_revoke_pending_institution(self):
+    @patch('institution_app.auth_helper.verify_token')
+    def test_cannot_revoke_pending_institution(self, mock_verify):
+        mock_verify.return_value = make_admin_user(self.admin_id)
         self.institution.status = Institution.Status.PENDING
         self.institution.save()
-        self.client.force_authenticate(user=MockUser())
-        self.client.credentials(HTTP_X_USER_ID=self.admin_id, HTTP_X_USER_ROLE='ADMIN')
+        self.client.credentials(HTTP_AUTHORIZATION='Bearer faketoken')
         response = self.client.put(
             f'/api/institution/{self.institution.id}/revoke/',
             data={'reason': 'Some reason'},
@@ -503,18 +518,20 @@ class TestRevokeEndpoint(TestCase):
         )
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
-    def test_revoke_fails_without_reason(self):
-        self.client.force_authenticate(user=MockUser())
-        self.client.credentials(HTTP_X_USER_ID=self.admin_id, HTTP_X_USER_ROLE='ADMIN')
+    @patch('institution_app.auth_helper.verify_token')
+    def test_revoke_fails_without_reason(self, mock_verify):
+        mock_verify.return_value = make_admin_user(self.admin_id)
+        self.client.credentials(HTTP_AUTHORIZATION='Bearer faketoken')
         response = self.client.put(
             f'/api/institution/{self.institution.id}/revoke/',
             data={}, format='json',
         )
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
-    def test_non_admin_cannot_revoke(self):
-        self.client.force_authenticate(user=MockUser())
-        self.client.credentials(HTTP_X_USER_ID=str(uuid.uuid4()), HTTP_X_USER_ROLE='ISSUER')
+    @patch('institution_app.auth_helper.verify_token')
+    def test_non_admin_cannot_revoke(self, mock_verify):
+        mock_verify.return_value = make_issuer_user()
+        self.client.credentials(HTTP_AUTHORIZATION='Bearer faketoken')
         response = self.client.put(
             f'/api/institution/{self.institution.id}/revoke/',
             data={'reason': 'Not allowed'},
@@ -522,9 +539,10 @@ class TestRevokeEndpoint(TestCase):
         )
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
-    def test_revoke_nonexistent_institution_returns_404(self):
-        self.client.force_authenticate(user=MockUser())
-        self.client.credentials(HTTP_X_USER_ID=self.admin_id, HTTP_X_USER_ROLE='ADMIN')
+    @patch('institution_app.auth_helper.verify_token')
+    def test_revoke_nonexistent_institution_returns_404(self, mock_verify):
+        mock_verify.return_value = make_admin_user(self.admin_id)
+        self.client.credentials(HTTP_AUTHORIZATION='Bearer faketoken')
         response = self.client.put(
             f'/api/institution/{uuid.uuid4()}/revoke/',
             data={'reason': 'Gone'},
@@ -560,22 +578,25 @@ class TestInstitutionDetailEndpoint(TestCase):
             status=Institution.Status.APPROVED,
         )
 
-    def test_admin_can_view_institution_detail(self):
-        self.client.force_authenticate(user=MockUser())
-        self.client.credentials(HTTP_X_USER_ID=self.admin_id, HTTP_X_USER_ROLE='ADMIN')
+    @patch('institution_app.auth_helper.verify_token')
+    def test_admin_can_view_institution_detail(self, mock_verify):
+        mock_verify.return_value = make_admin_user(self.admin_id)
+        self.client.credentials(HTTP_AUTHORIZATION='Bearer faketoken')
         response = self.client.get(f'/api/institution/{self.institution.id}/')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data['name'], 'Detail Test University')
 
-    def test_non_admin_cannot_view_detail(self):
-        self.client.force_authenticate(user=MockUser())
-        self.client.credentials(HTTP_X_USER_ID=str(uuid.uuid4()), HTTP_X_USER_ROLE='ISSUER')
+    @patch('institution_app.auth_helper.verify_token')
+    def test_non_admin_cannot_view_detail(self, mock_verify):
+        mock_verify.return_value = make_issuer_user()
+        self.client.credentials(HTTP_AUTHORIZATION='Bearer faketoken')
         response = self.client.get(f'/api/institution/{self.institution.id}/')
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
-    def test_detail_for_nonexistent_institution_returns_404(self):
-        self.client.force_authenticate(user=MockUser())
-        self.client.credentials(HTTP_X_USER_ID=self.admin_id, HTTP_X_USER_ROLE='ADMIN')
+    @patch('institution_app.auth_helper.verify_token')
+    def test_detail_for_nonexistent_institution_returns_404(self, mock_verify):
+        mock_verify.return_value = make_admin_user(self.admin_id)
+        self.client.credentials(HTTP_AUTHORIZATION='Bearer faketoken')
         response = self.client.get(f'/api/institution/{uuid.uuid4()}/')
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
 
