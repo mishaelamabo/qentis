@@ -37,13 +37,20 @@ pipeline {
                             cd /home/mishael/qentis
 
                             echo "======================================"
-                            echo "  UNIT TESTS — All 7 Services"
+                            echo "  UNIT TESTS + COVERAGE — All 7 Services"
                             echo "======================================"
 
                             for svc in user-auth institution item-registration blockchain auth-output verification admin-analytics; do
                                 echo ""
-                                echo "---------- Testing: $svc ----------"
-                                docker exec $svc sh -c "cd /app && python manage.py test --verbosity=1 2>&1"
+                                echo "========== $svc =========="
+                                docker exec $svc sh -c "
+                                    cd /app &&
+                                    pip install coverage --break-system-packages -q 2>/dev/null &&
+                                    coverage run --source=. manage.py test --verbosity=2 2>&1 &&
+                                    echo '' &&
+                                    echo '--- Coverage Report: '$svc' ---' &&
+                                    coverage report --skip-empty --omit='*/migrations/*,*/settings*,manage.py'
+                                "
                                 echo "✅ $svc PASSED"
                             done
 
@@ -57,7 +64,7 @@ pipeline {
 
                             echo ""
                             echo "======================================"
-                            echo "  ALL TESTS PASSED"
+                            echo "  ALL TESTS PASSED ✅"
                             echo "======================================"
 ENDSSH
                     '''
