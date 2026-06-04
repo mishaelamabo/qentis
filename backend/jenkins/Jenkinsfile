@@ -52,8 +52,8 @@ pipeline {
                             echo "  INTEGRATION TESTS"
                             echo "======================================"
                             cd /home/mishael/qentis/backend
-                            pip install requests --break-system-packages -q 2>/dev/null || true
-                            python tests/test_integration.py
+                            pip3 install requests --break-system-packages -q 2>/dev/null || true
+                            python3 tests/test_integration.py
 
                             echo ""
                             echo "======================================"
