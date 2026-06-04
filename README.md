@@ -170,13 +170,13 @@ All services expose interactive Swagger documentation at `/api/docs/`.
 
 | Service | Swagger URL |
 |---|---|
-| User & Auth | http://localhost:8001/api/docs/ |
+| User and Auth | http://localhost:8001/api/docs/ |
 | Institution | http://localhost:8002/api/docs/ |
 | Item Registration | http://localhost:8003/api/docs/ |
 | Blockchain | http://localhost:8004/api/docs/ |
 | Auth Output | http://localhost:8005/api/docs/ |
 | Verification | http://localhost:8006/api/docs/ |
-| Admin & Analytics | http://localhost:8007/api/docs/ |
+| Admin and Analytics | http://localhost:8007/api/docs/ |
 
 ---
 
