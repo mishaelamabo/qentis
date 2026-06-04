@@ -14,7 +14,7 @@ independently verifiable without relying on any central authority.
 
 | Name | Registration | Role |
 |---|---|---|
-| Mbetga Yomba Daniel Leo | ICTU20233822 | Scrum Master + Product Owner |
+| Mbetga Yomba Daniel Leo | ICTU20233822 | Scrum Master + Team Member |
 | Neba Mishael Amabo | ICTU20241112 | Team Member |
 
 ---
@@ -47,13 +47,13 @@ tamper-proof, and accessible to anyone with a smartphone.
 
 | Service | Responsibility | Port |
 |---|---|---|
-| User & Auth | Registration, login, JWT, RBAC | 8001 |
+| User and Auth | Registration, login, JWT, RBAC | 8001 |
 | Institution Management | Issuer onboarding, admin approval | 8002 |
 | Item Registration | Category forms, hash generation | 8003 |
 | Blockchain Service | Ethereum smart contracts, web3.py | 8004 |
 | Authentication Output | QR codes, serial numbers, signatures, watermarks | 8005 |
 | Verification Service | All 5 verification methods, fraud detection | 8006 |
-| Admin & Analytics | Platform management, fraud alerts, analytics | 8007 |
+| Admin and Analytics | Platform management, fraud alerts, analytics | 8007 |
 
 ---
 
