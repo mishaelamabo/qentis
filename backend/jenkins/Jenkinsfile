@@ -29,17 +29,41 @@ pipeline {
         }
 
         stage('Test') {
-            steps {
-                sh '''
-                    cd backend
-                    if [ -f tests/run_tests.sh ]; then
-                        bash tests/run_tests.sh
-                    else
-                        echo "No test runner yet, skipping..."
-                    fi
-                '''
-            }
+    steps {
+        sshagent(['vps-ssh-key']) {
+            sh '''
+                ssh -o StrictHostKeyChecking=no ${VPS_USER}@${VPS_IP} "
+                    set -e
+                    cd ${APP_DIR}
+
+                    echo '======================================'
+                    echo '  UNIT TESTS — All 7 Services'
+                    echo '======================================'
+
+                    for svc in user-auth institution item-registration blockchain auth-output verification admin-analytics; do
+                        echo ''
+                        echo '---------- Testing:' \$svc '----------'
+                        docker exec \$svc sh -c 'cd /app && python manage.py test --verbosity=1 2>&1'
+                        echo '✅' \$svc 'PASSED'
+                    done
+
+                    echo ''
+                    echo '======================================'
+                    echo '  INTEGRATION TESTS'
+                    echo '======================================'
+                    cd ${APP_DIR}/backend
+                    pip install requests --break-system-packages -q 2>/dev/null || true
+                    python tests/test_integration.py
+
+                    echo ''
+                    echo '======================================'
+                    echo '  ALL TESTS PASSED'
+                    echo '======================================'
+                "
+            '''
         }
+    }
+}
 
         stage('Build & Push to Docker Hub') {
             steps {
