@@ -9,54 +9,38 @@ class TestBlockchainRecordModel(TestCase):
 
     def test_record_created_successfully(self):
         record = BlockchainRecord.objects.create(
-            item_hash='a' * 64,
-            category=BlockchainRecord.Category.ACADEMIC,
-            issuer_id='issuer-001',
-            issuer_name='ICT University',
-            tx_hash='0xabc',
+            item_hash='a' * 64, category=BlockchainRecord.Category.ACADEMIC,
+            issuer_id='issuer-001', issuer_name='ICT University', tx_hash='0xabc',
         )
         self.assertIsNotNone(record.id)
         self.assertEqual(record.status, BlockchainRecord.Status.STORED)
 
     def test_record_str_representation(self):
         record = BlockchainRecord.objects.create(
-            item_hash='b' * 64,
-            category=BlockchainRecord.Category.PHARMA,
-            issuer_id='issuer-002',
-            issuer_name='PharmaLab',
-            tx_hash='0xdef',
+            item_hash='b' * 64, category=BlockchainRecord.Category.PHARMA,
+            issuer_id='issuer-002', issuer_name='PharmaLab', tx_hash='0xdef',
         )
-        s = str(record)
-        self.assertIn('PHARMA', s)
-        self.assertIn('STORED', s)
+        self.assertIn('PHARMA', str(record))
+        self.assertIn('STORED', str(record))
 
     def test_record_default_status_is_stored(self):
         record = BlockchainRecord.objects.create(
-            item_hash='c' * 64,
-            category=BlockchainRecord.Category.DOCUMENT,
-            issuer_id='issuer-003',
-            issuer_name='Ministry',
-            tx_hash='0x123',
+            item_hash='c' * 64, category=BlockchainRecord.Category.DOCUMENT,
+            issuer_id='issuer-003', issuer_name='Ministry', tx_hash='0x123',
         )
         self.assertEqual(record.status, BlockchainRecord.Status.STORED)
 
     def test_record_revoke_reason_blank_by_default(self):
         record = BlockchainRecord.objects.create(
-            item_hash='d' * 64,
-            category=BlockchainRecord.Category.CURRENCY,
-            issuer_id='issuer-004',
-            issuer_name='BEAC',
-            tx_hash='0x456',
+            item_hash='d' * 64, category=BlockchainRecord.Category.CURRENCY,
+            issuer_id='issuer-004', issuer_name='BEAC', tx_hash='0x456',
         )
         self.assertEqual(record.revoke_reason, '')
 
     def test_record_has_created_at(self):
         record = BlockchainRecord.objects.create(
-            item_hash='e' * 64,
-            category=BlockchainRecord.Category.ACADEMIC,
-            issuer_id='issuer-005',
-            issuer_name='ICT',
-            tx_hash='0x789',
+            item_hash='e' * 64, category=BlockchainRecord.Category.ACADEMIC,
+            issuer_id='issuer-005', issuer_name='ICT', tx_hash='0x789',
         )
         self.assertIsNotNone(record.created_at)
 
@@ -204,20 +188,16 @@ class TestRevokeHashEndpoint(TestCase):
         self.client = APIClient()
         self.url = '/api/blockchain/revoke/'
         self.record = BlockchainRecord.objects.create(
-            item_hash='e' * 64,
-            category='ACADEMIC',
-            issuer_id='issuer-001',
-            issuer_name='ICT University',
-            tx_hash='0xabc',
-            status=BlockchainRecord.Status.STORED,
+            item_hash='e' * 64, category='ACADEMIC',
+            issuer_id='issuer-001', issuer_name='ICT University',
+            tx_hash='0xabc', status=BlockchainRecord.Status.STORED,
         )
 
     @patch('blockchain_app.views.revoke_hash_on_chain')
     def test_revoke_success(self, mock_revoke):
         mock_revoke.return_value = '0xrevoke123'
         response = self.client.post(self.url, {
-            'item_hash': 'e' * 64,
-            'reason': 'Diploma is fake',
+            'item_hash': 'e' * 64, 'reason': 'Diploma is fake',
         }, format='json')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertIn('tx_hash', response.data)
@@ -228,16 +208,14 @@ class TestRevokeHashEndpoint(TestCase):
     def test_revoke_sets_revoke_reason(self, mock_revoke):
         mock_revoke.return_value = '0xrevoke123'
         self.client.post(self.url, {
-            'item_hash': 'e' * 64,
-            'reason': 'Diploma is fake',
+            'item_hash': 'e' * 64, 'reason': 'Diploma is fake',
         }, format='json')
         self.record.refresh_from_db()
         self.assertEqual(self.record.revoke_reason, 'Diploma is fake')
 
     def test_revoke_hash_not_found_returns_404(self):
         response = self.client.post(self.url, {
-            'item_hash': 'f' * 64,
-            'reason': 'Does not exist',
+            'item_hash': 'f' * 64, 'reason': 'Does not exist',
         }, format='json')
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
 
@@ -253,8 +231,7 @@ class TestRevokeHashEndpoint(TestCase):
     def test_revoke_blockchain_error_returns_503(self, mock_revoke):
         mock_revoke.side_effect = Exception('Ganache connection failed')
         response = self.client.post(self.url, {
-            'item_hash': 'e' * 64,
-            'reason': 'Test error',
+            'item_hash': 'e' * 64, 'reason': 'Test error',
         }, format='json')
         self.assertEqual(response.status_code, status.HTTP_503_SERVICE_UNAVAILABLE)
 
@@ -280,16 +257,15 @@ class TestHealthCheckEndpoint(TestCase):
         response = self.client.get('/api/blockchain/health/')
         self.assertIn('ganache_connected', response.data)
 
-    @patch('blockchain_app.views.get_web3')
-    def test_health_check_ganache_connected_true(self, mock_get_web3):
-        mock_w3 = MagicMock()
-        mock_w3.is_connected.return_value = True
-        mock_get_web3.return_value = mock_w3
-        response = self.client.get('/api/blockchain/health/')
+    def test_health_check_ganache_connected_true(self):
+        with patch('blockchain_app.web3_client.get_web3') as mock_get_web3:
+            mock_w3 = MagicMock()
+            mock_w3.is_connected.return_value = True
+            mock_get_web3.return_value = mock_w3
+            response = self.client.get('/api/blockchain/health/')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
     def test_health_check_ganache_disconnected(self):
-        # Ganache won't be reachable in test env — connected should be False
         response = self.client.get('/api/blockchain/health/')
         self.assertIn(response.data['ganache_connected'], [True, False])
 
