@@ -76,7 +76,7 @@
         - helm version --short
       register: versions
 
-    - name: Print versions
+    - name: Print installed versions
       debug:
         msg: "{{ item.stdout }}"
       loop: "{{ versions.results }}"

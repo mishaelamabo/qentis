@@ -4,7 +4,7 @@
   become: yes
   vars:
     app_dir: /home/mishael/qentis
-    repo_url: https://github.com/DanielLeo09/qentis.git
+    repo_url: https://github.com/mishaelamabo/qentis.git
 
   tasks:
     - name: Allow SSH
@@ -26,13 +26,24 @@
       ufw:
         rule: allow
         port: "{{ item }}"
-      loop: ["8001","8002","8003","8004","8005","8006","8007"]
+      loop:
+        - "8001"
+        - "8002"
+        - "8003"
+        - "8004"
+        - "8005"
+        - "8006"
+        - "8007"
 
     - name: Allow monitoring ports
       ufw:
         rule: allow
         port: "{{ item }}"
-      loop: ["3000","8080","9090","9100"]
+      loop:
+        - "3000"
+        - "8080"
+        - "9090"
+        - "9100"
 
     - name: Enable UFW
       ufw:
@@ -47,15 +58,6 @@
         version: main
         force: yes
       become_user: mishael
-
-    - name: Generate self-signed SSL certificate
-      command: >
-        openssl req -x509 -nodes -days 365 -newkey rsa:2048
-        -keyout /etc/ssl/private/qentis.key
-        -out /etc/ssl/certs/qentis.crt
-        -subj "/C=CM/ST=Centre/L=Yaounde/O=ICTUniversity/CN=207.180.217.238"
-      args:
-        creates: /etc/ssl/certs/qentis.crt
 
     - name: Copy Nginx config
       copy:
@@ -94,3 +96,12 @@
         - verification
         - admin-analytics
       ignore_errors: yes
+
+    - name: Verify services are running
+      shell: docker compose -f {{ app_dir }}/backend/docker-compose.yml ps
+      become_user: mishael
+      register: services_status
+
+    - name: Print services status
+      debug:
+        msg: "{{ services_status.stdout }}"
