@@ -46,7 +46,7 @@ pipeline {
                                 docker exec $svc sh -c "
                                     cd /app &&
                                     pip install coverage --break-system-packages -q 2>/dev/null &&
-                                    coverage run --source=. manage.py test --verbosity=2 2>&1 &&
+                                    coverage run --source=. manage.py test --verbosity=1 2>&1 &&
                                     echo '' &&
                                     echo '--- Coverage Report: '$svc' ---' &&
                                     coverage report --skip-empty --omit='*/migrations/*,*/settings*,manage.py'
@@ -106,9 +106,16 @@ ENDSSH
                     sh '''
                         ssh -o StrictHostKeyChecking=no ${VPS_USER}@${VPS_IP} bash << 'ENDSSH'
                             set -e
+
+                            echo "--- Backing up docker-compose.yml with secrets ---"
+                            cp /home/mishael/qentis/backend/docker-compose.yml /tmp/docker-compose.yml.bak
+
                             cd /home/mishael/qentis
                             git fetch origin
                             git reset --hard origin/main
+
+                            echo "--- Restoring docker-compose.yml with secrets ---"
+                            cp /tmp/docker-compose.yml.bak /home/mishael/qentis/backend/docker-compose.yml
 
                             echo "--- Stopping app services only ---"
                             cd /home/mishael/qentis/backend
