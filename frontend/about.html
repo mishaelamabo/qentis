@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>About Us — Qentis</title>
+  <link href="/frontend/assets/css/index.css" rel="stylesheet"/>
+  <link href="/frontend/assets/css/about.css" rel="stylesheet"/>
+</head>
+<body>
+
+  <div class="q-bg-layer"></div>
+  <div class="q-grid-layer"></div>
+
+  <!-- ── Navbar ── -->
+  <nav class="q-navbar">
+    <a href="/frontend/index.html" class="q-logo">Qen<span>tis</span></a>
+    <div class="q-navbar-actions">
+      <a href="/frontend/login.html" class="btn-q-outline">Sign in</a>
+      <a href="/frontend/register.html" class="btn-q-accent">Get started</a>
+    </div>
+  </nav>
+
+  <!-- ── Page Header ── -->
+  <section class="page-header">
+    <div class="q-container">
+      <div class="page-header-inner">
+        <span class="section-eyebrow">The Team</span>
+        <h1>Built by students,<br>for <span>real impact</span></h1>
+        <p>
+          Qentis was designed and developed by two Computer Science students at
+          ICT University Cameroon as part of the SEN3244 Software Architecture
+          final project (Spring 2026).
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <div class="q-divider"></div>
+
+  <!-- ── Team Members ── -->
+  <section class="team-section">
+    <div class="q-container">
+
+      <div class="team-section-header">
+        <h2>Meet the developers</h2>
+        <p>Two members. Seven microservices. One blockchain-powered platform.</p>
+      </div>
+
+      <!-- Individual cards -->
+      <div class="team-grid">
+
+        <!-- Daniel -->
+        <div class="member-card">
+          <div class="member-avatar-wrap">
+            <img
+              src="/frontend/assets/images/DANIEL'S PHOTO.jpeg"
+              alt="Daniel Leo Mbetga"
+              class="member-avatar"
+            />
+            <span class="member-role-badge">Scrum Master</span>
+          </div>
+
+          <div class="member-name">Mbetga Yomba Daniel Leo</div>
+          <div class="member-reg">ICTU20233822</div>
+          <div class="member-title">Scrum Master · Frontend Developer · Backend Developer</div>
+
+          <div class="member-divider"></div>
+
+          <ul class="member-contributions">
+            <li>Blockchain Service: Ethereum smart contracts via web3.py</li>
+            <li>Authentication Output Service: QR codes, serial numbers, digital signatures, watermarks</li>
+            <li>Admin & Analytics Service: fraud alerts, activity logs, platform stats</li>
+            <li>Integration testing: 22 tests across all 7 services</li>
+            <li>Project documentation: report, README, progress log</li>
+            <li>Sprint planning, backlog management, GitHub Projects board</li>
+          </ul>
+        </div>
+
+        <!-- Mishael -->
+        <div class="member-card">
+          <div class="member-avatar-wrap">
+            <img
+              src="/frontend/assets/images/MISHAEL'S PHOTO.jpeg"
+              alt="Neba Mishael Amabo"
+              class="member-avatar"
+            />
+            <span class="member-role-badge">Product Owner</span>
+          </div>
+
+          <div class="member-name">Neba Mishael Amabo</div>
+          <div class="member-reg">ICTU20241112</div>
+          <div class="member-title">Product Owner · Backend Developer · Frontend Lead</div>
+
+          <div class="member-divider"></div>
+
+          <ul class="member-contributions">
+            <li>User & Authentication Service: JWT, RBAC, bcrypt</li>
+            <li>Institution Management Service: issuer onboarding and approval</li>
+            <li>Item Registration Service: category forms, SHA-256 hashing</li>
+            <li>Verification Service: 5 verification methods, fraud detection</li>
+            <li>Frontend development: all 4 dashboards, verification interface</li>
+            <li>VPS deployment: Kubernetes, Nginx, SSL, CI/CD pipeline</li>
+          </ul>
+        </div>
+
+      </div><!-- end .team-grid -->
+
+      <!-- Team photo card -->
+      <div class="team-photo-card">
+
+        <div class="team-photo-wrap">
+          <img
+            src="/frontend/assets/images/TEAM PHOTO.jpeg"
+            alt="Daniel and Mishael"
+            class="team-photo"
+          />
+        </div>
+
+        <div class="team-info">
+          <span class="team-label">The Qentis Team · Spring 2026</span>
+          <h3>Two developers.<br>One mission.</h3>
+          <p>
+            Qentis was built over 8 weeks as a Final Project for SEN3244
+            Software Architecture at ICT University Cameroon. Every line of
+            code, every microservice, and every architectural decision was made
+            with one goal: to solve a real problem that affects millions of
+            people across Africa and the World every day.
+          </p>
+          <div class="team-meta">
+            <div class="team-meta-item">
+              <span class="team-meta-label">University</span>
+              <span class="team-meta-value">ICT University Cameroon</span>
+            </div>
+            <div class="team-meta-item">
+              <span class="team-meta-label">Course</span>
+              <span class="team-meta-value">SEN3244: Software Architecture</span>
+            </div>
+            <div class="team-meta-item">
+              <span class="team-meta-label">Semester</span>
+              <span class="team-meta-value">Spring 2026</span>
+            </div>
+            <div class="team-meta-item">
+              <span class="team-meta-label">Instructor</span>
+              <span class="team-meta-value">Engr. TEKOH PALMA</span>
+            </div>
+          </div>
+        </div>
+
+      </div><!-- end .team-photo-card -->
+
+    </div><!-- end .q-container -->
+  </section>
+
+  <!-- ── Mission ── -->
+  <section class="mission-section">
+    <div class="q-container">
+      <div class="mission-card">
+
+        <span class="section-eyebrow">Our Mission</span>
+        <h2>Authenticity verification for everyone</h2>
+        <p>
+          In Cameroon across Africa and the World, fake diplomas go undetected, counterfeit
+          medicines harm patients, and fraudulent documents destroy lives. Qentis
+          exists to make verification instant, tamper-proof, and accessible to
+          anyone with no account required, no expensive equipment, and no
+          dependence on any central authority.
+        </p>
+        <a href="/frontend/pages/verifier/verify.html" class="btn-q-accent">
+          Try verification now
+        </a>
+
+        <div class="mission-stats">
+          <div class="mission-stat">
+            <div class="mission-stat-value">7</div>
+            <div class="mission-stat-label">Microservices</div>
+          </div>
+          <div class="mission-stat">
+            <div class="mission-stat-value">61</div>
+            <div class="mission-stat-label">Unit tests</div>
+          </div>
+          <div class="mission-stat">
+            <div class="mission-stat-value">5</div>
+            <div class="mission-stat-label">Verify methods</div>
+          </div>
+          <div class="mission-stat">
+            <div class="mission-stat-value">&lt;3s</div>
+            <div class="mission-stat-label">Verify time</div>
+          </div>
+          <div class="mission-stat">
+            <div class="mission-stat-value">8wks</div>
+            <div class="mission-stat-label">Built in</div>
+          </div>
+        </div>
+
+      </div><!-- end .mission-card -->
+    </div><!-- end .q-container -->
+  </section>
+
+  <!-- ── Footer ── -->
+  <footer class="q-footer">
+    Qentis © 2026 · Built at ICT University Cameroon · SEN3244 Software Architecture
+  </footer>
+
+</body>
+</html>
