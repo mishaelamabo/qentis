@@ -46,7 +46,7 @@ pipeline {
                                 docker exec $svc sh -c "
                                     cd /app &&
                                     pip install coverage --break-system-packages -q 2>/dev/null &&
-                                    coverage run --source=. manage.py test --verbosity=1 2>&1 &&
+                                    coverage run --source=. manage.py test --verbosity=1 --keepdb 2>&1 &&
                                     echo '' &&
                                     echo '--- Coverage Report: '$svc' ---' &&
                                     coverage report --skip-empty --omit='*/migrations/*,*/settings*,manage.py'
