@@ -59,6 +59,7 @@ services:
       - SECRET_KEY=qentis-secret-key-2026
       - DEBUG=True
       - DB_HOST=postgres
+      - DB_PASSWORD=Qentis2026Secure1
       - REDIS_URL=redis://redis:6379/0
       - ALLOWED_HOSTS=*
       - JWT_ACCESS_TOKEN_LIFETIME_MINUTES=60
@@ -83,6 +84,7 @@ services:
       - SECRET_KEY=qentis-secret-key-2026
       - DEBUG=True
       - DB_HOST=postgres
+      - DB_PASSWORD=Qentis2026Secure1
       - REDIS_URL=redis://redis:6379/1
       - AUTH_SERVICE_URL=http://user-auth:8001
       - ALLOWED_HOSTS=*
@@ -106,6 +108,7 @@ services:
       - SECRET_KEY=qentis-secret-key-2026
       - DEBUG=True
       - DB_HOST=postgres
+      - DB_PASSWORD=Qentis2026Secure1
       - REDIS_URL=redis://redis:6379/2
       - AUTH_SERVICE_URL=http://user-auth:8001
       - BLOCKCHAIN_SERVICE_URL=http://blockchain:8004
@@ -134,6 +137,7 @@ services:
       - SECRET_KEY=qentis-secret-key-2026
       - DEBUG=True
       - DB_HOST=postgres
+      - DB_PASSWORD=Qentis2026Secure1
       - ALLOWED_HOSTS=*
       - GANACHE_URL=http://ganache:8545
       - CONTRACT_ADDRESS=0xe78A0F7E598Cc8b0Bb87894B0F60dD2a88d6a8Ab
@@ -158,6 +162,7 @@ services:
       - SECRET_KEY=qentis-secret-key-2026
       - DEBUG=True
       - DB_HOST=postgres
+      - DB_PASSWORD=Qentis2026Secure1
       - ALLOWED_HOSTS=*
       - AUTH_SERVICE_URL=http://user-auth:8001
       - BLOCKCHAIN_SERVICE_URL=http://blockchain:8004
@@ -183,6 +188,7 @@ services:
       - SECRET_KEY=qentis-secret-key-2026
       - DEBUG=True
       - DB_HOST=postgres
+      - DB_PASSWORD=Qentis2026Secure1
       - REDIS_URL=redis://redis:6379/4
       - BLOCKCHAIN_SERVICE_URL=http://blockchain:8004
       - OUTPUT_SERVICE_URL=http://auth-output:8005
@@ -215,6 +221,7 @@ services:
       - SECRET_KEY=qentis-secret-key-2026
       - DEBUG=True
       - DB_HOST=postgres
+      - DB_PASSWORD=Qentis2026Secure1
       - ALLOWED_HOSTS=*
       - AUTH_SERVICE_URL=http://user-auth:8001
       - INSTITUTION_SERVICE_URL=http://institution:8002

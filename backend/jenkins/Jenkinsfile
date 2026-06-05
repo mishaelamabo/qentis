@@ -30,14 +30,45 @@ pipeline {
 
         stage('Test') {
             steps {
-                sh '''
-                    cd backend
-                    if [ -f tests/run_tests.sh ]; then
-                        bash tests/run_tests.sh
-                    else
-                        echo "No test runner yet, skipping..."
-                    fi
-                '''
+                sshagent(['vps-ssh-key']) {
+                    sh '''
+                        ssh -o StrictHostKeyChecking=no ${VPS_USER}@${VPS_IP} bash << 'ENDSSH'
+                            set -e
+                            cd /home/mishael/qentis
+
+                            echo "======================================"
+                            echo "  UNIT TESTS + COVERAGE — All 7 Services"
+                            echo "======================================"
+
+                            for svc in user-auth institution item-registration blockchain auth-output verification admin-analytics; do
+                                echo ""
+                                echo "========== $svc =========="
+                                docker exec $svc sh -c "
+                                    cd /app &&
+                                    pip install coverage --break-system-packages -q 2>/dev/null &&
+                                    coverage run --source=. manage.py test --verbosity=1 2>&1 &&
+                                    echo '' &&
+                                    echo '--- Coverage Report: '$svc' ---' &&
+                                    coverage report --skip-empty --omit='*/migrations/*,*/settings*,manage.py'
+                                "
+                                echo "✅ $svc PASSED"
+                            done
+
+                            echo ""
+                            echo "======================================"
+                            echo "  INTEGRATION TESTS"
+                            echo "======================================"
+                            cd /home/mishael/qentis/backend
+                            pip3 install requests --break-system-packages -q 2>/dev/null || true
+                            python3 tests/test_integration.py
+
+                            echo ""
+                            echo "======================================"
+                            echo "  ALL TESTS PASSED ✅"
+                            echo "======================================"
+ENDSSH
+                    '''
+                }
             }
         }
 
@@ -73,29 +104,42 @@ pipeline {
             steps {
                 sshagent(['vps-ssh-key']) {
                     sh '''
-                        ssh -o StrictHostKeyChecking=no ${VPS_USER}@${VPS_IP} "
+                        ssh -o StrictHostKeyChecking=no ${VPS_USER}@${VPS_IP} bash << 'ENDSSH'
                             set -e
-                            cd ${APP_DIR} && git fetch origin && git reset --hard origin/main
 
-                            echo '--- Stopping app services only ---'
-                            cd ${APP_DIR}/backend
+                            echo "--- Backing up docker-compose.yml with secrets ---"
+                            cp /home/mishael/qentis/backend/docker-compose.yml /tmp/docker-compose.yml.bak
+
+                            cd /home/mishael/qentis
+                            git fetch origin
+                            git reset --hard origin/main
+
+                            echo "--- Restoring docker-compose.yml with secrets ---"
+                            cp /tmp/docker-compose.yml.bak /home/mishael/qentis/backend/docker-compose.yml
+
+                            echo "--- Stopping app services only ---"
+                            cd /home/mishael/qentis/backend
                             docker compose stop user-auth institution item-registration blockchain auth-output verification admin-analytics || true
 
-                            echo '--- Starting app services only ---'
+                            echo "--- Starting app services only ---"
                             docker compose up -d --build --no-deps user-auth institution item-registration blockchain auth-output verification admin-analytics
 
-                            echo '--- Running migrations ---'
+                            echo "--- Running migrations ---"
                             sleep 15
                             for svc in user-auth institution item-registration blockchain auth-output verification admin-analytics; do
-                                docker exec \$svc python manage.py migrate --noinput || true
+                                docker exec $svc python manage.py migrate --noinput || true
                             done
 
-                            echo '--- Reloading Nginx ---'
+                            echo "--- Reloading Nginx ---"
                             sudo nginx -t && sudo systemctl reload nginx
 
-                            echo '--- Services status ---'
+                            echo "--- Updating frontend ---"
+                            sudo cp -r /home/mishael/qentis/frontend/* /var/www/qentis/
+                            sudo chown -R www-data:www-data /var/www/qentis/
+
+                            echo "--- Services status ---"
                             docker compose ps
-                        "
+ENDSSH
                     '''
                 }
             }
