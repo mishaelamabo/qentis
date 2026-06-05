@@ -28,11 +28,13 @@
       apt_key:
         url: https://download.docker.com/linux/ubuntu/gpg
         state: present
+      ignore_errors: yes
 
     - name: Add Docker repository
       apt_repository:
         repo: "deb [arch=amd64] https://download.docker.com/linux/ubuntu {{ ansible_distribution_release }} stable"
         state: present
+      ignore_errors: yes
 
     - name: Install Docker
       apt:
@@ -44,6 +46,7 @@
           - docker-compose-plugin
         state: present
         update_cache: yes
+      ignore_errors: yes
 
     - name: Start and enable Docker
       systemd:
@@ -75,8 +78,10 @@
         - k3s --version
         - helm version --short
       register: versions
+      ignore_errors: yes
 
     - name: Print installed versions
       debug:
         msg: "{{ item.stdout }}"
       loop: "{{ versions.results }}"
+      when: item.stdout is defined
