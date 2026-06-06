@@ -1,0 +1,369 @@
+<mxfile host="Electron" agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) draw.io/28.0.6 Chrome/138.0.7204.100 Electron/37.2.3 Safari/537.36">
+  <diagram name="Page-1" id="7Ncnjxz2szmoqwwSmhv3">
+    <mxGraphModel dx="2735" dy="2331" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="850" pageHeight="1100" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="100" parent="1" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=22;fontStyle=1;" value="Qentis&amp;nbsp; Use Case Diagram" vertex="1">
+          <mxGeometry height="50" width="1000" x="520" y="-310" as="geometry" />
+        </mxCell>
+        <mxCell id="SB" parent="1" style="rounded=1;whiteSpace=wrap;fillColor=none;strokeColor=#007700;strokeWidth=3;fontSize=15;fontStyle=1;verticalAlign=top;spacingTop=10;" value="Qentis Blockchain Authenticity Verification Platform" vertex="1">
+          <mxGeometry height="1340" width="1450" x="280" y="-250" as="geometry" />
+        </mxCell>
+        <mxCell id="A1" parent="1" style="shape=umlActor;whiteSpace=wrap;fontSize=12;fontStyle=1;verticalLabelPosition=bottom;verticalAlign=top;" value="&lt;&lt;Issuer&gt;&gt;" vertex="1">
+          <mxGeometry height="80" width="60" x="80" y="280" as="geometry" />
+        </mxCell>
+        <mxCell id="A2" parent="1" style="shape=umlActor;whiteSpace=wrap;fontSize=12;fontStyle=1;verticalLabelPosition=bottom;verticalAlign=top;" value="&lt;&lt;Verifier&gt;&gt;" vertex="1">
+          <mxGeometry height="80" width="60" x="80" y="700" as="geometry" />
+        </mxCell>
+        <mxCell id="G1" parent="1" style="text;html=1;fontSize=12;fontStyle=1;align=center;rounded=1;" value="Authentication" vertex="1">
+          <mxGeometry height="30" width="220" x="390" y="-190" as="geometry" />
+        </mxCell>
+        <mxCell id="UC1" parent="1" style="ellipse;whiteSpace=wrap;fontSize=11;" value="Register Account" vertex="1">
+          <mxGeometry height="50" width="180" x="390" y="-120" as="geometry" />
+        </mxCell>
+        <mxCell id="UC2" parent="1" style="ellipse;whiteSpace=wrap;fontSize=11;" value="Login" vertex="1">
+          <mxGeometry height="50" width="180" x="430" y="200" as="geometry" />
+        </mxCell>
+        <mxCell id="UC3" parent="1" style="ellipse;whiteSpace=wrap;fontSize=11;" value="Logout" vertex="1">
+          <mxGeometry height="50" width="180" x="370" y="10" as="geometry" />
+        </mxCell>
+        <mxCell id="UC4" parent="1" style="ellipse;whiteSpace=wrap;fontSize=11;" value="View Profile" vertex="1">
+          <mxGeometry height="50" width="180" x="380" y="420" as="geometry" />
+        </mxCell>
+        <mxCell id="UC4b" parent="1" style="ellipse;whiteSpace=wrap;fontSize=11;" value="Validate JWT Token" vertex="1">
+          <mxGeometry height="50" width="180" x="340" y="480" as="geometry" />
+        </mxCell>
+        <mxCell id="G2" parent="1" style="text;html=1;fontSize=12;fontStyle=1;align=center;rounded=1;" value="Institution Management" vertex="1">
+          <mxGeometry height="30" width="220" x="660" y="-200" as="geometry" />
+        </mxCell>
+        <mxCell id="UC5" parent="1" style="ellipse;whiteSpace=wrap;fontSize=11;" value="Apply for Institution" vertex="1">
+          <mxGeometry height="50" width="200" x="660" y="-130" as="geometry" />
+        </mxCell>
+        <mxCell id="UC6" parent="1" style="ellipse;whiteSpace=wrap;fontSize=11;" value="Check Application Status" vertex="1">
+          <mxGeometry height="50" width="200" x="650" y="-40" as="geometry" />
+        </mxCell>
+        <mxCell id="UC7" parent="1" style="ellipse;whiteSpace=wrap;fontSize=11;" value="Approve Institution" vertex="1">
+          <mxGeometry height="50" width="200" x="640" y="130" as="geometry" />
+        </mxCell>
+        <mxCell id="UC8" parent="1" style="ellipse;whiteSpace=wrap;fontSize=11;" value="Reject Institution" vertex="1">
+          <mxGeometry height="50" width="200" x="720" y="280" as="geometry" />
+        </mxCell>
+        <mxCell id="UC9" parent="1" style="ellipse;whiteSpace=wrap;fontSize=11;" value="Revoke Institution" vertex="1">
+          <mxGeometry height="50" width="200" x="550" y="330" as="geometry" />
+        </mxCell>
+        <mxCell id="UC9b" parent="1" style="ellipse;whiteSpace=wrap;fontSize=11;" value="Send Rejection Notification" vertex="1">
+          <mxGeometry height="50" width="200" x="565" y="470" as="geometry" />
+        </mxCell>
+        <mxCell id="G3" parent="1" style="text;html=1;fontSize=12;fontStyle=1;align=center;rounded=1;" value="Item Registration" vertex="1">
+          <mxGeometry height="30" width="220" x="990" y="-200" as="geometry" />
+        </mxCell>
+        <mxCell id="UC10" parent="1" style="ellipse;whiteSpace=wrap;fontSize=11;" value="Register Certificate" vertex="1">
+          <mxGeometry height="50" width="200" x="1000" y="-140" as="geometry" />
+        </mxCell>
+        <mxCell id="UC11" parent="1" style="ellipse;whiteSpace=wrap;fontSize=11;" value="Register Pharmaceutical" vertex="1">
+          <mxGeometry height="50" width="200" x="1000" y="-40" as="geometry" />
+        </mxCell>
+        <mxCell id="UC12" parent="1" style="ellipse;whiteSpace=wrap;fontSize=11;" value="Register Document (CNI)" vertex="1">
+          <mxGeometry height="50" width="200" x="1050" y="50" as="geometry" />
+        </mxCell>
+        <mxCell id="UC13" parent="1" style="ellipse;whiteSpace=wrap;fontSize=11;" value="Register Banknote" vertex="1">
+          <mxGeometry height="50" width="200" x="1070" y="140" as="geometry" />
+        </mxCell>
+        <mxCell id="UC14" parent="1" style="ellipse;whiteSpace=wrap;fontSize=11;" value="View My Items" vertex="1">
+          <mxGeometry height="50" width="200" x="840" y="405" as="geometry" />
+        </mxCell>
+        <mxCell id="UC15" parent="1" style="ellipse;whiteSpace=wrap;fontSize=11;" value="Revoke Item" vertex="1">
+          <mxGeometry height="50" width="200" x="890" y="520" as="geometry" />
+        </mxCell>
+        <mxCell id="UC16" parent="1" style="ellipse;whiteSpace=wrap;fontSize=11;" value="Approve Item" vertex="1">
+          <mxGeometry height="50" width="200" x="540" y="540" as="geometry" />
+        </mxCell>
+        <mxCell id="UC16b" parent="1" style="ellipse;whiteSpace=wrap;fontSize=11;" value="Generate Hash (SHA-256)" vertex="1">
+          <mxGeometry height="50" width="200" x="1210" y="-80" as="geometry" />
+        </mxCell>
+        <mxCell id="G4" parent="1" style="text;html=1;fontSize=12;fontStyle=1;align=center;rounded=1;" value="Verification" vertex="1">
+          <mxGeometry height="30" width="220" x="315" y="550" as="geometry" />
+        </mxCell>
+        <mxCell id="UC17" parent="1" style="ellipse;whiteSpace=wrap;fontSize=11;" value="Verify via QR Code" vertex="1">
+          <mxGeometry height="50" width="200" x="310" y="600" as="geometry" />
+        </mxCell>
+        <mxCell id="UC18" parent="1" style="ellipse;whiteSpace=wrap;fontSize=11;" value="Verify via Serial Number" vertex="1">
+          <mxGeometry height="50" width="200" x="310" y="690" as="geometry" />
+        </mxCell>
+        <mxCell id="UC19" parent="1" style="ellipse;whiteSpace=wrap;fontSize=11;" value="Verify via Digital Signature" vertex="1">
+          <mxGeometry height="50" width="200" x="400" y="900" as="geometry" />
+        </mxCell>
+        <mxCell id="UC20" parent="1" style="ellipse;whiteSpace=wrap;fontSize=11;" value="Verify via OCR (Photo Scan)" vertex="1">
+          <mxGeometry height="50" width="200" x="320" y="800" as="geometry" />
+        </mxCell>
+        <mxCell id="UC22" parent="1" style="ellipse;whiteSpace=wrap;fontSize=11;" value="Report Suspicious Item" vertex="1">
+          <mxGeometry height="50" width="200" x="360" y="990" as="geometry" />
+        </mxCell>
+        <mxCell id="BseXe0xDUkLKjE49KdKE-205" edge="1" parent="1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="405" y="965" as="sourcePoint" />
+            <mxPoint x="405" y="960" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="G5" parent="1" style="text;html=1;fontSize=12;fontStyle=1;align=center;rounded=1;" value="Blockchain Operations" vertex="1">
+          <mxGeometry height="30" width="220" x="1085" y="530" as="geometry" />
+        </mxCell>
+        <mxCell id="UC23" parent="1" style="ellipse;whiteSpace=wrap;fontSize=11;" value="Store Hash On-Chain" vertex="1">
+          <mxGeometry height="50" width="200" x="1090" y="575" as="geometry" />
+        </mxCell>
+        <mxCell id="UC24" parent="1" style="ellipse;whiteSpace=wrap;fontSize=11;" value="Verify Hash On-Chain" vertex="1">
+          <mxGeometry height="50" width="200" x="1090" y="640" as="geometry" />
+        </mxCell>
+        <mxCell id="UC25" parent="1" style="ellipse;whiteSpace=wrap;fontSize=11;" value="Revoke Hash On-Chain" vertex="1">
+          <mxGeometry height="50" width="200" x="1120" y="715" as="geometry" />
+        </mxCell>
+        <mxCell id="UC26" parent="1" style="ellipse;whiteSpace=wrap;fontSize=11;" value="Generate QR Code" vertex="1">
+          <mxGeometry height="50" width="200" x="965" y="790" as="geometry" />
+        </mxCell>
+        <mxCell id="UC27" parent="1" style="ellipse;whiteSpace=wrap;fontSize=11;" value="Generate Serial Number" vertex="1">
+          <mxGeometry height="50" width="200" x="890" y="880" as="geometry" />
+        </mxCell>
+        <mxCell id="UC28" parent="1" style="ellipse;whiteSpace=wrap;fontSize=11;" value="Generate Digital Signature" vertex="1">
+          <mxGeometry height="50" width="200" x="765" y="1020" as="geometry" />
+        </mxCell>
+        <mxCell id="G6" parent="1" style="text;html=1;fontSize=12;fontStyle=1;align=center;rounded=1;" value="Admin &amp; Analytics" vertex="1">
+          <mxGeometry height="30" width="220" x="1305" y="-200" as="geometry" />
+        </mxCell>
+        <mxCell id="UC29" parent="1" style="ellipse;whiteSpace=wrap;fontSize=11;" value="View Dashboard Stats" vertex="1">
+          <mxGeometry height="50" width="200" x="1410" y="-180" as="geometry" />
+        </mxCell>
+        <mxCell id="UC30" parent="1" style="ellipse;whiteSpace=wrap;fontSize=11;" value="Manage Fraud Alerts" vertex="1">
+          <mxGeometry height="50" width="200" x="1410" y="-40" as="geometry" />
+        </mxCell>
+        <mxCell id="UC31" parent="1" style="ellipse;whiteSpace=wrap;fontSize=11;" value="View Activity Logs" vertex="1">
+          <mxGeometry height="50" width="200" x="1305" y="100" as="geometry" />
+        </mxCell>
+        <mxCell id="UC32" parent="1" style="ellipse;whiteSpace=wrap;fontSize=11;" value="View All Items" vertex="1">
+          <mxGeometry height="50" width="200" x="1250" y="230" as="geometry" />
+        </mxCell>
+        <mxCell id="UC33" parent="1" style="ellipse;whiteSpace=wrap;fontSize=11;" value="View Verification History" vertex="1">
+          <mxGeometry height="50" width="200" x="1270" y="430" as="geometry" />
+        </mxCell>
+        <mxCell id="UC34" parent="1" style="ellipse;whiteSpace=wrap;fontSize=11;" value="View Fraud Flags" vertex="1">
+          <mxGeometry height="50" width="200" x="1490" y="540" as="geometry" />
+        </mxCell>
+        <mxCell id="101" edge="1" parent="1" source="A1" style="endArrow=none;" target="UC1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="102" edge="1" parent="1" source="A1" style="endArrow=none;" target="UC2">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="103" edge="1" parent="1" source="A1" style="endArrow=none;" target="UC3">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="104" edge="1" parent="1" source="A1" style="endArrow=none;" target="UC4">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="105" edge="1" parent="1" source="A1" style="endArrow=none;" target="UC5">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="106" edge="1" parent="1" source="A1" style="endArrow=none;" target="UC6">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="107" edge="1" parent="1" source="A1" style="endArrow=none;" target="UC10">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="108" edge="1" parent="1" source="A1" style="endArrow=none;" target="UC11">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="109" edge="1" parent="1" source="A1" style="endArrow=none;" target="UC12">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="640" y="310" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="110" edge="1" parent="1" source="A1" style="endArrow=none;" target="UC13">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="111" edge="1" parent="1" source="A1" style="endArrow=none;" target="UC14">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="112" edge="1" parent="1" source="A1" style="endArrow=none;" target="UC15">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="113" edge="1" parent="1" source="A2" style="endArrow=none;" target="UC2">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="114" edge="1" parent="1" source="A2" style="endArrow=none;" target="UC17">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="115" edge="1" parent="1" source="A2" style="endArrow=none;" target="UC18">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="116" edge="1" parent="1" source="A2" style="endArrow=none;" target="UC19">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="117" edge="1" parent="1" source="A2" style="endArrow=none;" target="UC20">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="119" edge="1" parent="1" source="A2" style="endArrow=none;" target="UC22">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="120" edge="1" parent="1" style="endArrow=none;" target="UC2">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="1800" y="268.9678269260571" as="sourcePoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="121" edge="1" parent="1" style="endArrow=none;" target="UC7">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="1800" y="266.83419340872206" as="sourcePoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="122" edge="1" parent="1" style="endArrow=none;" target="UC8">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1280" y="320" />
+            </Array>
+            <mxPoint x="1800" y="272.7272727272725" as="sourcePoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="123" edge="1" parent="1" style="endArrow=none;" target="UC9">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="1800" y="272.1632730157867" as="sourcePoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="124" edge="1" parent="1" style="endArrow=none;" target="UC16">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="1800" y="277.4372438901946" as="sourcePoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="125" edge="1" parent="1" style="endArrow=none;" target="UC29">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="1800" y="230.15048405025027" as="sourcePoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="126" edge="1" parent="1" style="endArrow=none;" target="UC30">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="1800" y="243.27257113321366" as="sourcePoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="127" edge="1" parent="1" style="endArrow=none;" target="UC31">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="1800" y="259.7571497627937" as="sourcePoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="128" edge="1" parent="1" style="endArrow=none;" target="UC32">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="1800" y="269.057068597544" as="sourcePoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="129" edge="1" parent="1" style="endArrow=none;" target="UC33">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="1800" y="282.07371005451296" as="sourcePoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="130" edge="1" parent="1" style="endArrow=none;" target="UC34">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="1800" y="306.8787780801481" as="sourcePoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="131" edge="1" parent="1" style="endArrow=none;" target="UC23">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="1830" y="743.2806760007729" as="sourcePoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="132" edge="1" parent="1" style="endArrow=none;" target="UC24">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="1830" y="746.1877144535943" as="sourcePoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="133" edge="1" parent="1" style="endArrow=none;" target="UC25">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="1830" y="749.5254745989428" as="sourcePoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="134" edge="1" parent="1" style="endArrow=none;" target="UC26">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="1830" y="752.4578248980433" as="sourcePoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="135" edge="1" parent="1" style="endArrow=none;" target="UC27">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="1830" y="755.3455926341599" as="sourcePoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="136" edge="1" parent="1" style="endArrow=none;" target="UC28">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="1830" y="758.8949625843256" as="sourcePoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="INC1" edge="1" parent="1" source="UC10" style="endArrow=open;endFill=0;dashed=1;fontSize=10;fontStyle=2;" target="UC16b" value="&lt;&lt;include&gt;&gt;">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="INC2" edge="1" parent="1" source="UC11" style="endArrow=open;endFill=0;dashed=1;fontSize=10;fontStyle=2;" target="UC16b" value="&lt;&lt;include&gt;&gt;">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="INC3" edge="1" parent="1" source="UC12" style="endArrow=open;endFill=0;dashed=1;fontSize=10;fontStyle=2;" target="UC16b" value="&lt;&lt;include&gt;&gt;">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="INC4" edge="1" parent="1" source="UC13" style="endArrow=open;endFill=0;dashed=1;fontSize=10;fontStyle=2;" target="UC16b" value="&lt;&lt;include&gt;&gt;">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="INC5" edge="1" parent="1" source="UC16" style="endArrow=open;endFill=0;dashed=1;fontSize=10;fontStyle=2;" target="UC23" value="&lt;&lt;include&gt;&gt;">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="INC6" edge="1" parent="1" source="UC16" style="endArrow=open;endFill=0;dashed=1;fontSize=10;fontStyle=2;" target="UC26" value="&lt;&lt;include&gt;&gt;">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="INC7" edge="1" parent="1" source="UC16" style="endArrow=open;endFill=0;dashed=1;fontSize=10;fontStyle=2;" target="UC27" value="&lt;&lt;include&gt;&gt;">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="INC8" edge="1" parent="1" source="UC15" style="endArrow=open;endFill=0;dashed=1;fontSize=10;fontStyle=2;" target="UC25" value="&lt;&lt;include&gt;&gt;">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="INC9" edge="1" parent="1" source="UC17" style="endArrow=open;endFill=0;dashed=1;fontSize=10;fontStyle=2;" target="UC24" value="&lt;&lt;include&gt;&gt;">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="INC10" edge="1" parent="1" source="UC18" style="endArrow=open;endFill=0;dashed=1;fontSize=10;fontStyle=2;" target="UC24" value="&lt;&lt;include&gt;&gt;">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="INC11" edge="1" parent="1" source="UC19" style="endArrow=open;endFill=0;dashed=1;fontSize=10;fontStyle=2;" target="UC24" value="&lt;&lt;include&gt;&gt;">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="INC15" edge="1" parent="1" source="UC8" style="endArrow=open;endFill=0;dashed=1;fontSize=10;fontStyle=2;" target="UC9b" value="&lt;&lt;include&gt;&gt;">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="EXT2" edge="1" parent="1" source="UC20" style="endArrow=open;endFill=0;dashed=1;fontSize=10;fontStyle=2;strokeColor=#b85450;" target="UC18" value="&lt;&lt;extend&gt;&gt;">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="EXT3" edge="1" parent="1" source="UC28" style="endArrow=open;endFill=0;dashed=1;fontSize=10;fontStyle=2;strokeColor=#d6b656;" target="UC16" value="&lt;&lt;extend&gt;&gt;&#xa;[category=ACADEMIC&#xa;or DOCUMENT]">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="EXT4" edge="1" parent="1" source="UC34" style="endArrow=open;endFill=0;dashed=1;fontSize=10;fontStyle=2;strokeColor=#9673a6;" target="UC30" value="&lt;&lt;extend&gt;&gt;">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="EXT5" edge="1" parent="1" source="UC9" style="endArrow=open;endFill=0;dashed=1;fontSize=10;fontStyle=2;" target="UC7" value="&lt;&lt;extend&gt;&gt;&#xa;[status=APPROVED]">
+          <mxGeometry relative="1" x="-0.1611" y="15" as="geometry">
+            <mxPoint as="offset" />
+            <Array as="points">
+              <mxPoint x="690" y="250" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="BseXe0xDUkLKjE49KdKE-203" parent="1" style="text;html=1;whiteSpace=wrap;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;rounded=0;" value="Text" vertex="1">
+          <mxGeometry height="30" width="60" x="-140" y="400" as="geometry" />
+        </mxCell>
+        <mxCell id="BseXe0xDUkLKjE49KdKE-208" parent="1" style="rounded=1;whiteSpace=wrap;html=1;" value="&amp;lt;&amp;lt;Actor&amp;gt;&amp;gt;&lt;div&gt;Blockchain(genache)&lt;/div&gt;" vertex="1">
+          <mxGeometry height="60" width="120" x="1830" y="730" as="geometry" />
+        </mxCell>
+        <mxCell id="BseXe0xDUkLKjE49KdKE-209" parent="1" style="rounded=1;whiteSpace=wrap;html=1;" value="&amp;lt;&amp;lt;Actor&amp;gt;&amp;gt;&lt;div&gt;Admin&lt;/div&gt;" vertex="1">
+          <mxGeometry height="90" width="120" x="1800" y="220" as="geometry" />
+        </mxCell>
+        <mxCell id="BseXe0xDUkLKjE49KdKE-212" edge="1" parent="1" style="edgeStyle=none;orthogonalLoop=1;jettySize=auto;html=1;rounded=0;" value="">
+          <mxGeometry relative="1" width="100" as="geometry">
+            <Array as="points" />
+            <mxPoint x="1010" y="1260" as="sourcePoint" />
+            <mxPoint x="1110" y="1260" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
